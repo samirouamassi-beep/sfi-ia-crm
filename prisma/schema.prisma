@@ -1,0 +1,155 @@
+// Modele calque sur Suivi_Operationnel_SFI_IA.xlsx (onglets Comptes, Contacts, Pipeline,
+// Ressources, Missions, Interactions, Listes). Toutes les valeurs "calculees" dans le fichier
+// Excel (marge, montant pondere, indicateurs "en retard"...) sont recalculees a la lecture
+// dans src/lib/calculs.ts, jamais stockees ici.
+//
+// Types volontairement portables String/Float/DateTime/Int (pas d'enum Prisma) pour permettre
+// un dev local en SQLite puis un passage a PostgreSQL (Neon) sans changement de schema.
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Fondateur {
+  id  String @id @default(cuid())
+  nom String @unique
+}
+
+model Compte {
+  id                  String   @id @default(cuid())
+  nom                 String   @unique
+  categorie           String
+  secteur             String?
+  statutRelation      String
+  priorite            String
+  fondateurReferent   String?
+  contactPrincipal    String?
+  origineRelation     String?
+  statutReferencement String?
+  delaiPaiementJours  Int?
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  contacts     Contact[]
+  opportunites Opportunite[]
+  missions     Mission[]
+  interactions Interaction[]
+}
+
+model Contact {
+  id                String    @id @default(cuid())
+  nom               String
+  prenom            String
+  compteId          String?
+  compte            Compte?   @relation(fields: [compteId], references: [id])
+  fonction          String?
+  roleDecision      String?
+  email             String?
+  telephone         String?
+  linkedin          String?
+  fondateurReferent String?
+  priorite          String?
+  relancePrevueLe   DateTime?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  interactions Interaction[]
+}
+
+model Opportunite {
+  id                      String    @id @default(cuid())
+  intitule                String
+  compteId                String
+  compte                  Compte    @relation(fields: [compteId], references: [id])
+  typeOffre               String
+  nbJoursOuPostes         Float?
+  montant                 Float
+  etape                   String
+  dateClosingVisee        DateTime?
+  fondateurReferent       String?
+  prochaineAction         String?
+  echeanceProchaineAction DateTime?
+  concurrenceIdentifiee   String?
+  notes                   String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+model Ressource {
+  id                     String    @id @default(cuid())
+  nom                    String
+  prenom                 String
+  typeContrat            String
+  entite                 String
+  niveau                 String
+  statut                 String
+  competencesSalesforce  String?
+  certificationsDetenues String?
+  anneesExperience       Float?
+  salaireBrutMensuel     Float?
+  tjmAchat               Float?
+  tjmVenteCible          Float?
+  disponibleAPartirDe    DateTime?
+  sourceApporteur        String?
+  notes                  String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  missions Mission[]
+}
+
+model Mission {
+  id                   String    @id @default(cuid())
+  compteId             String
+  compte               Compte    @relation(fields: [compteId], references: [id])
+  mission              String
+  typeOffre            String
+  ressourceId          String?
+  ressource            Ressource? @relation(fields: [ressourceId], references: [id])
+  dateDebut            DateTime?
+  dateFinPrevue        DateTime?
+  joursFacturesParMois Float?
+  tjmVente             Float?
+  tjmCoutAchat         Float?
+  statut               String
+  fondateurReferent    String?
+  notes                String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Interaction {
+  id              String    @id @default(cuid())
+  date            DateTime
+  compteId        String?
+  compte          Compte?   @relation(fields: [compteId], references: [id])
+  contactId       String?
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  type            String
+  fondateur       String?
+  sujet           String?
+  compteRendu     String?
+  prochaineAction String?
+  echeance        DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+// Equivalent des colonnes S/T de l'onglet Listes (parametres de charges).
+model Parametre {
+  cle    String @id
+  valeur Float
+}
+
+// Equivalent des colonnes P/Q de l'onglet Listes (probabilite par etape de pipeline).
+model EtapePipeline {
+  etape       String @id
+  probabilite Float
+  ordre       Int    @default(0)
+}
