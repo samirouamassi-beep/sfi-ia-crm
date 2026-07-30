@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { estEnRetard } from "@/lib/calculs";
-import { formatDate, linkButtonClass, Badge } from "@/components/ui";
+import { formatDate, linkButtonClass, Badge, rowLinkClass } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,7 @@ export default async function InteractionsPage() {
             {interactions.map((i) => (
               <tr key={i.id} className="hover:bg-slate-50">
                 <td className="px-3 py-2">
-                  <Link href={`/interactions/${i.id}`} className="font-medium text-slate-900 hover:underline">
+                  <Link href={`/interactions/${i.id}`} className={rowLinkClass}>
                     {formatDate(i.date)}
                   </Link>
                 </td>

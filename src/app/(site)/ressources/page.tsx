@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRessourcesAvecIndicateurs } from "@/lib/calculs";
-import { formatEuros, formatPourcentage, linkButtonClass } from "@/components/ui";
+import { formatEuros, formatPourcentage, linkButtonClass, rowLinkClass } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +40,7 @@ export default async function RessourcesPage() {
             {ressources.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50">
                 <td className="px-3 py-2">
-                  <Link href={`/ressources/${r.id}`} className="font-medium text-slate-900 hover:underline">
+                  <Link href={`/ressources/${r.id}`} className={rowLinkClass}>
                     {r.nom} {r.prenom}
                   </Link>
                 </td>

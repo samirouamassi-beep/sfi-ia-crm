@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { calculOpportunite, getEtapesPipeline } from "@/lib/calculs";
-import { formatEuros, formatPourcentage, formatDate, linkButtonClass, Badge } from "@/components/ui";
+import { formatEuros, formatPourcentage, formatDate, linkButtonClass, Badge, rowLinkClass } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +47,7 @@ export default async function PipelinePage() {
               return (
                 <tr key={o.id} className="hover:bg-slate-50">
                   <td className="px-3 py-2">
-                    <Link href={`/pipeline/${o.id}`} className="font-medium text-slate-900 hover:underline">
+                    <Link href={`/pipeline/${o.id}`} className={rowLinkClass}>
                       {o.intitule}
                     </Link>
                   </td>

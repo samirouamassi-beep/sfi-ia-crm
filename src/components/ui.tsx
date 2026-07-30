@@ -71,6 +71,8 @@ export function Badge({ children, retard }: { children: React.ReactNode; retard?
   );
 }
 
+export const rowLinkClass = "font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900";
+
 export const inputClass =
   "mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none";
 export const labelClass = "block text-sm font-medium text-slate-700";

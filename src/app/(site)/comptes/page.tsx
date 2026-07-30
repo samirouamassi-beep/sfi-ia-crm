@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getComptesAvecIndicateurs } from "@/lib/calculs";
-import { formatEuros, formatDate, linkButtonClass } from "@/components/ui";
+import { formatEuros, formatDate, linkButtonClass, rowLinkClass } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,7 @@ export default async function ComptesPage() {
             {comptes.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50">
                 <td className="px-3 py-2">
-                  <Link href={`/comptes/${c.id}`} className="font-medium text-slate-900 hover:underline">
+                  <Link href={`/comptes/${c.id}`} className={rowLinkClass}>
                     {c.nom}
                   </Link>
                 </td>

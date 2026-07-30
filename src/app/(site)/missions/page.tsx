@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { calculMission } from "@/lib/calculs";
-import { formatEuros, formatPourcentage, linkButtonClass } from "@/components/ui";
+import { formatEuros, formatPourcentage, linkButtonClass, rowLinkClass } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +45,7 @@ export default async function MissionsPage() {
               return (
                 <tr key={m.id} className="hover:bg-slate-50">
                   <td className="px-3 py-2">
-                    <Link href={`/missions/${m.id}`} className="font-medium text-slate-900 hover:underline">
+                    <Link href={`/missions/${m.id}`} className={rowLinkClass}>
                       {m.mission}
                     </Link>
                   </td>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getContactsAvecIndicateurs } from "@/lib/calculs";
-import { formatDate, linkButtonClass, Badge } from "@/components/ui";
+import { formatDate, linkButtonClass, Badge, rowLinkClass } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,7 @@ export default async function ContactsPage() {
             {contacts.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50">
                 <td className="px-3 py-2">
-                  <Link href={`/contacts/${c.id}`} className="font-medium text-slate-900 hover:underline">
+                  <Link href={`/contacts/${c.id}`} className={rowLinkClass}>
                     {c.nom} {c.prenom}
                   </Link>
                 </td>
