@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { creerInteraction } from "../actions";
 import { InteractionForm } from "../InteractionForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function NouvelleInteractionPage() {
   const [comptes, contacts, fondateurs] = await Promise.all([
     prisma.compte.findMany({ orderBy: { nom: "asc" } }),

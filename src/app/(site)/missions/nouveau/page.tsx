@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { creerMission } from "../actions";
 import { MissionForm } from "../MissionForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function NouvelleMissionPage() {
   const [comptes, ressources, fondateurs] = await Promise.all([
     prisma.compte.findMany({ orderBy: { nom: "asc" } }),

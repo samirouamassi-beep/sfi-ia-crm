@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { creerCompte } from "../actions";
 import { CompteForm } from "../CompteForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function NouveauComptePage() {
   const fondateurs = await prisma.fondateur.findMany({ orderBy: { nom: "asc" } });
 

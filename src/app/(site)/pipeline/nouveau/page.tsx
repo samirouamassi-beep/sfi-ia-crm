@@ -3,6 +3,8 @@ import { getEtapesPipeline } from "@/lib/calculs";
 import { creerOpportunite } from "../actions";
 import { OpportuniteForm } from "../OpportuniteForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function NouvelleOpportunitePage() {
   const [comptes, fondateurs, etapes] = await Promise.all([
     prisma.compte.findMany({ orderBy: { nom: "asc" } }),

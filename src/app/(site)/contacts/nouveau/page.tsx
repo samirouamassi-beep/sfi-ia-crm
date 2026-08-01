@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { creerContact } from "../actions";
 import { ContactForm } from "../ContactForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function NouveauContactPage() {
   const [comptes, fondateurs] = await Promise.all([
     prisma.compte.findMany({ orderBy: { nom: "asc" } }),
