@@ -185,7 +185,9 @@ export function RessourceForm({
             <p className="mt-1 text-sm">
               Fichier actuel :{" "}
               <a
-                href={valeurs.cvUrl}
+                href={`/api/cv?url=${encodeURIComponent(valeurs.cvUrl)}${
+                  valeurs.cvNom ? `&nom=${encodeURIComponent(valeurs.cvNom)}` : ""
+                }`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-700 underline underline-offset-2 hover:text-blue-900"

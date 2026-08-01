@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
+import { randomUUID } from "crypto";
 
 const EXTENSIONS_CV_AUTORISEES = [".pdf", ".doc", ".docx", ".ppt", ".pptx"];
 
@@ -19,8 +20,8 @@ async function televerserCv(formData: FormData): Promise<{ cvNom: string; cvUrl:
   if (!extensionAutorisee(fichier.name)) {
     throw new Error("Format de CV non autorise (PDF, Word ou PowerPoint uniquement).");
   }
-  const resultat = await put(`cv/${crypto.randomUUID()}-${fichier.name}`, fichier, {
-    access: "public",
+  const resultat = await put(`cv/${randomUUID()}-${fichier.name}`, fichier, {
+    access: "private",
   });
   return { cvNom: fichier.name, cvUrl: resultat.url };
 }
