@@ -98,6 +98,8 @@ model Ressource {
   tjmVenteCible          Float?
   disponibleAPartirDe    DateTime?
   sourceApporteur        String?
+  cvNom                  String?
+  cvUrl                  String?
   notes                  String?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt

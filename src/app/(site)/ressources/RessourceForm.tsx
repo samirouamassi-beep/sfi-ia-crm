@@ -23,6 +23,8 @@ type Valeurs = {
   tjmVenteCible?: number | null;
   disponibleAPartirDe?: Date | null;
   sourceApporteur?: string | null;
+  cvNom?: string | null;
+  cvUrl?: string | null;
   notes?: string | null;
 };
 
@@ -176,6 +178,33 @@ export function RessourceForm({
             defaultValue={valeurs.sourceApporteur ?? ""}
             className={inputClass}
           />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={labelClass}>CV (PDF, Word ou PowerPoint)</label>
+          {valeurs.cvUrl && (
+            <p className="mt-1 text-sm">
+              Fichier actuel :{" "}
+              <a
+                href={valeurs.cvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-700 underline underline-offset-2 hover:text-blue-900"
+              >
+                {valeurs.cvNom ?? "voir le CV"}
+              </a>
+            </p>
+          )}
+          <input
+            type="file"
+            name="cv"
+            accept=".pdf,.doc,.docx,.ppt,.pptx"
+            className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            {valeurs.cvUrl
+              ? "Choisir un nouveau fichier remplace le CV actuel."
+              : "Facultatif — 4,5 Mo maximum."}
+          </p>
         </div>
       </div>
       <div>
