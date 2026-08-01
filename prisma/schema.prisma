@@ -18,6 +18,8 @@ generator client {
 model Fondateur {
   id  String @id @default(cuid())
   nom String @unique
+
+  documents Document[]
 }
 
 model Compte {
@@ -104,7 +106,8 @@ model Ressource {
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
-  missions Mission[]
+  missions  Mission[]
+  documents Document[]
 }
 
 model Mission {
@@ -141,6 +144,20 @@ model Interaction {
   prochaineAction String?
   echeance        DateTime?
   createdAt       DateTime  @default(now())
+}
+
+// Dossier RH : documents rattaches soit a un fondateur, soit a une ressource
+// (salarie/freelance). Stockage prive sur Vercel Blob, servi via /api/documents.
+model Document {
+  id          String     @id @default(cuid())
+  nom         String
+  url         String
+  fondateurId String?
+  fondateur   Fondateur? @relation(fields: [fondateurId], references: [id])
+  ressourceId String?
+  ressource   Ressource? @relation(fields: [ressourceId], references: [id])
+  creePar     String?
+  createdAt   DateTime   @default(now())
 }
 
 // Equivalent des colonnes S/T de l'onglet Listes (parametres de charges).

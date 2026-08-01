@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { get } from "@vercel/blob";
 
-// Sert les CV (stockes en "private" sur Vercel Blob) aux utilisateurs deja
-// authentifies par le proxy applicatif (src/proxy.ts couvre aussi /api/*).
+// Sert les fichiers prives stockes sur Vercel Blob (CV et documents RH) aux
+// utilisateurs deja authentifies par le proxy applicatif (src/proxy.ts couvre aussi /api/*).
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.searchParams.get("url");
   const nom = request.nextUrl.searchParams.get("nom");
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   } catch {
     return new NextResponse("URL invalide", { status: 400 });
   }
-  if (!pathname.startsWith("cv/")) {
+  if (!pathname.startsWith("cv/") && !pathname.startsWith("rh/")) {
     return new NextResponse("Acces refuse", { status: 403 });
   }
 

@@ -9,6 +9,7 @@ const LIENS = [
   { href: "/ressources", label: "Ressources" },
   { href: "/missions", label: "Missions" },
   { href: "/interactions", label: "Interactions" },
+  { href: "/rh", label: "RH" },
   { href: "/parametres", label: "Paramètres" },
 ];
 
