@@ -36,7 +36,7 @@ export async function creerCompte(formData: FormData) {
 export async function modifierCompte(id: string, formData: FormData) {
   await prisma.compte.update({ where: { id }, data: donnees(formData) });
   revalidatePath("/comptes");
-  redirect("/comptes");
+  redirect(`/comptes/${id}`);
 }
 
 export async function supprimerCompte(id: string) {

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cheminRetour } from "@/lib/retour";
 
 function champ(formData: FormData, nom: string): string | null {
   const v = formData.get(nom);
@@ -32,7 +33,7 @@ function donnees(formData: FormData) {
 export async function creerOpportunite(formData: FormData) {
   await prisma.opportunite.create({ data: donnees(formData) });
   revalidatePath("/pipeline");
-  redirect("/pipeline");
+  redirect(cheminRetour(formData, "/pipeline"));
 }
 
 export async function modifierOpportunite(id: string, formData: FormData) {
@@ -45,4 +46,12 @@ export async function supprimerOpportunite(id: string) {
   await prisma.opportunite.delete({ where: { id } });
   revalidatePath("/pipeline");
   redirect("/pipeline");
+}
+
+/** Kanban : deplacement d'une carte vers une autre etape (glisser-deposer). */
+export async function changerEtapeOpportunite(id: string, etape: string) {
+  const existe = await prisma.etapePipeline.findUnique({ where: { etape } });
+  if (!existe) throw new Error(`Étape inconnue : ${etape}`);
+  await prisma.opportunite.update({ where: { id }, data: { etape } });
+  revalidatePath("/pipeline");
 }

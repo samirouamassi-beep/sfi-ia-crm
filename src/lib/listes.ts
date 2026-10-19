@@ -92,3 +92,24 @@ export const CERTIFICATIONS_SALESFORCE = [
 ] as const;
 
 export const STATUTS_MISSION = ["En cours", "Terminée", "Suspendue"] as const;
+
+export const STATUTS_PROSPECT = [
+  "Nouveau",
+  "Contacté",
+  "Qualifié",
+  "Non qualifié",
+  "Converti",
+] as const;
+
+export const SOURCES_PROSPECT = [
+  "LinkedIn",
+  "Recommandation",
+  "Événement",
+  "Site web",
+  "Partenaire intégrateur",
+  "Éditeur Salesforce",
+  "Appel entrant",
+  "Autre",
+] as const;
+
+export const STATUTS_TACHE = ["À faire", "Terminée"] as const;

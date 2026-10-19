@@ -28,15 +28,18 @@ export function OpportuniteForm({
   comptes,
   fondateurs,
   etapes,
+  retour,
 }: {
   action: (formData: FormData) => void;
   valeurs?: Valeurs;
   comptes: { id: string; nom: string }[];
   fondateurs: { nom: string }[];
   etapes: { etape: string }[];
+  retour?: string;
 }) {
   return (
     <form action={action} className="space-y-4">
+      {retour && <input type="hidden" name="retour" value={retour} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className={labelClass}>Intitulé de l&apos;opportunité *</label>
@@ -160,7 +163,7 @@ export function OpportuniteForm({
         <button type="submit" className={buttonPrimaryClass}>
           Enregistrer
         </button>
-        <Link href="/pipeline" className={buttonSecondaryClass}>
+        <Link href={retour ?? "/pipeline"} className={buttonSecondaryClass}>
           Annuler
         </Link>
       </div>

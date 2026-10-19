@@ -42,6 +42,8 @@ model Compte {
   opportunites Opportunite[]
   missions     Mission[]
   interactions Interaction[]
+  taches       Tache[]
+  prospects    Prospect[]
 }
 
 model Contact {
@@ -63,6 +65,8 @@ model Contact {
   updatedAt         DateTime  @updatedAt
 
   interactions Interaction[]
+  taches       Tache[]
+  prospects    Prospect[]
 }
 
 model Opportunite {
@@ -82,6 +86,9 @@ model Opportunite {
   notes                   String?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
+
+  taches    Tache[]
+  prospects Prospect[]
 }
 
 model Ressource {
@@ -171,4 +178,60 @@ model EtapePipeline {
   etape       String @id
   probabilite Float
   ordre       Int    @default(0)
+}
+
+// Taches et relances (equivalent des "Tasks" Salesforce) : une action a faire, avec une
+// echeance, rattachee optionnellement a un compte, un contact ou une opportunite.
+model Tache {
+  id            String       @id @default(cuid())
+  sujet         String
+  echeance      DateTime?
+  priorite      String?
+  fondateur     String?
+  statut        String       @default("À faire")
+  termineeLe    DateTime?
+  compteId      String?
+  compte        Compte?      @relation(fields: [compteId], references: [id], onDelete: SetNull)
+  contactId     String?
+  contact       Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportuniteId String?
+  opportunite   Opportunite? @relation(fields: [opportuniteId], references: [id], onDelete: SetNull)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+// Prospects (equivalent des "Leads" Salesforce) : une personne pas encore qualifiee, avant
+// qu'elle devienne compte + contact (+ opportunite) via la conversion.
+model Prospect {
+  id                String       @id @default(cuid())
+  nom               String
+  prenom            String
+  societe           String
+  fonction          String?
+  email             String?
+  telephone         String?
+  linkedin          String?
+  source            String?
+  statut            String
+  fondateurReferent String?
+  notes             String?
+  convertiLe        DateTime?
+  compteId          String?
+  compte            Compte?      @relation(fields: [compteId], references: [id], onDelete: SetNull)
+  contactId         String?
+  contact           Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportuniteId     String?
+  opportunite       Opportunite? @relation(fields: [opportuniteId], references: [id], onDelete: SetNull)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+// Vues de liste enregistrees : un nom + les filtres/tri d'une page liste (query string).
+model VueListe {
+  id        String   @id @default(cuid())
+  nom       String
+  page      String
+  requete   String
+  createdAt DateTime @default(now())
 }

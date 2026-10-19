@@ -1,10 +1,14 @@
+import Link from "next/link";
 import { getTableauDeBord } from "@/lib/calculs";
+import { getAgenda } from "@/lib/agenda";
 import { Section, Stat, formatEuros, formatPourcentage } from "@/components/ui";
+import { ListeAgenda } from "@/components/agenda";
 
 export const dynamic = "force-dynamic";
 
 export default async function TableauDeBordPage() {
-  const tb = await getTableauDeBord();
+  const [tb, agenda] = await Promise.all([getTableauDeBord(), getAgenda()]);
+  const aFaire = agenda.filter((e) => e.echeance === "retard" || e.echeance === "aujourdhui");
 
   return (
     <div className="space-y-6">
@@ -14,6 +18,29 @@ export default async function TableauDeBordPage() {
           Tout se calcule automatiquement à partir des autres pages. Aucune saisie ici.
         </p>
       </div>
+
+      <Section
+        title={`À faire aujourd'hui (${aFaire.length})`}
+        action={
+          <Link href="/taches" className="text-xs text-slate-500 hover:underline">
+            Toutes les tâches et relances →
+          </Link>
+        }
+      >
+        <ListeAgenda
+          elements={aFaire.slice(0, 10)}
+          vide="Aucune tâche ni relance en retard ou prévue aujourd'hui."
+        />
+        {aFaire.length > 10 && (
+          <p className="pt-2 text-xs text-slate-500">
+            + {aFaire.length - 10} autres dans{" "}
+            <Link href="/taches" className="underline">
+              Tâches
+            </Link>
+            .
+          </p>
+        )}
+      </Section>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Section title="Portefeuille">
