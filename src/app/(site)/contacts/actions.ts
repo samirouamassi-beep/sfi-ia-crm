@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cheminRetour } from "@/lib/retour";
 
 function champ(formData: FormData, nom: string): string | null {
   const v = formData.get(nom);
@@ -31,7 +32,7 @@ function donnees(formData: FormData) {
 export async function creerContact(formData: FormData) {
   await prisma.contact.create({ data: donnees(formData) });
   revalidatePath("/contacts");
-  redirect("/contacts");
+  redirect(cheminRetour(formData, "/contacts"));
 }
 
 export async function modifierContact(id: string, formData: FormData) {

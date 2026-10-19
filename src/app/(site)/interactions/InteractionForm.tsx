@@ -25,15 +25,18 @@ export function InteractionForm({
   comptes,
   contacts,
   fondateurs,
+  retour,
 }: {
   action: (formData: FormData) => void;
   valeurs?: Valeurs;
   comptes: { id: string; nom: string }[];
   contacts: { id: string; nom: string; prenom: string }[];
   fondateurs: { nom: string }[];
+  retour?: string;
 }) {
   return (
     <form action={action} className="space-y-4">
+      {retour && <input type="hidden" name="retour" value={retour} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass}>Date *</label>
@@ -126,7 +129,7 @@ export function InteractionForm({
         <button type="submit" className={buttonPrimaryClass}>
           Enregistrer
         </button>
-        <Link href="/interactions" className={buttonSecondaryClass}>
+        <Link href={retour ?? "/interactions"} className={buttonSecondaryClass}>
           Annuler
         </Link>
       </div>

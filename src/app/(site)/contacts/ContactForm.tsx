@@ -27,14 +27,17 @@ export function ContactForm({
   valeurs = {},
   comptes,
   fondateurs,
+  retour,
 }: {
   action: (formData: FormData) => void;
   valeurs?: Valeurs;
   comptes: { id: string; nom: string }[];
   fondateurs: { nom: string }[];
+  retour?: string;
 }) {
   return (
     <form action={action} className="space-y-4">
+      {retour && <input type="hidden" name="retour" value={retour} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass}>Nom *</label>
@@ -126,7 +129,7 @@ export function ContactForm({
         <button type="submit" className={buttonPrimaryClass}>
           Enregistrer
         </button>
-        <Link href="/contacts" className={buttonSecondaryClass}>
+        <Link href={retour ?? "/contacts"} className={buttonSecondaryClass}>
           Annuler
         </Link>
       </div>

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cheminRetour } from "@/lib/retour";
 
 function champ(formData: FormData, nom: string): string | null {
   const v = formData.get(nom);
@@ -28,7 +29,7 @@ function donnees(formData: FormData) {
 export async function creerInteraction(formData: FormData) {
   await prisma.interaction.create({ data: donnees(formData) });
   revalidatePath("/interactions");
-  redirect("/interactions");
+  redirect(cheminRetour(formData, "/interactions"));
 }
 
 export async function modifierInteraction(id: string, formData: FormData) {
