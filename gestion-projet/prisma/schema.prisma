@@ -1,0 +1,131 @@
+// Pilotis — gestion de projets et de portefeuille (V0 de démonstration).
+//
+// Valeurs fixes (statuts, priorités...) stockées en String et listées dans src/lib/listes.ts,
+// pas d'enum Prisma, pour pouvoir les adapter facilement au besoin du client.
+// Les indicateurs (avancement, budget consommé, charge, retard) sont calculés à la lecture
+// dans src/lib/calculs.ts, jamais stockés.
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model Membre {
+  id             String  @id @default(cuid())
+  nom            String
+  email          String? @unique
+  role           String
+  tauxJournalier Float   @default(0)
+  capaciteJours  Float   @default(5) // jours disponibles par semaine
+  actif          Boolean @default(true)
+
+  projetsDiriges Projet[]
+  taches         Tache[]
+  temps          Temps[]
+  risques        Risque[]
+}
+
+model Projet {
+  id           String    @id @default(cuid())
+  code         String    @unique
+  nom          String
+  client       String?
+  description  String?
+  chefId       String?
+  chef         Membre?   @relation(fields: [chefId], references: [id], onDelete: SetNull)
+  statut       String
+  priorite     String
+  meteo        String // Vert / Orange / Rouge : santé déclarée par le chef de projet
+  debut        DateTime
+  fin          DateTime
+  budget       Float     @default(0)
+  commentaire  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  phases   Phase[]
+  taches   Tache[]
+  depenses Depense[]
+  risques  Risque[]
+  temps    Temps[]
+}
+
+model Phase {
+  id       String  @id @default(cuid())
+  projetId String
+  projet   Projet  @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  nom      String
+  ordre    Int     @default(0)
+
+  taches Tache[]
+}
+
+model Tache {
+  id            String    @id @default(cuid())
+  projetId      String
+  projet        Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  phaseId       String?
+  phase         Phase?    @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  nom           String
+  description   String?
+  responsableId String?
+  responsable   Membre?   @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  statut        String
+  priorite      String
+  jalon         Boolean   @default(false)
+  debut         DateTime
+  fin           DateTime
+  chargeJours   Float     @default(0) // charge prévue
+  avancement    Int       @default(0) // 0-100
+  ordre         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  temps Temps[]
+}
+
+model Temps {
+  id       String   @id @default(cuid())
+  membreId String
+  membre   Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  projetId String
+  projet   Projet   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  tacheId  String?
+  tache    Tache?   @relation(fields: [tacheId], references: [id], onDelete: SetNull)
+  date     DateTime
+  jours    Float
+  note     String?
+
+  @@unique([membreId, projetId, tacheId, date])
+}
+
+model Depense {
+  id        String   @id @default(cuid())
+  projetId  String
+  projet    Projet   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  libelle   String
+  categorie String
+  montant   Float
+  date      DateTime
+}
+
+model Risque {
+  id            String    @id @default(cuid())
+  projetId      String
+  projet        Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  type          String // Risque / Problème
+  titre         String
+  description   String?
+  probabilite   Int       @default(2) // 1-4
+  impact        Int       @default(2) // 1-4
+  statut        String
+  responsableId String?
+  responsable   Membre?   @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  mitigation    String?
+  echeance      DateTime?
+  createdAt     DateTime  @default(now())
+}

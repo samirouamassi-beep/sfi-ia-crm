@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Application de gestion de projet : projet autonome, avec sa propre config.
+    "gestion-projet/**",
   ]),
 ]);
 
