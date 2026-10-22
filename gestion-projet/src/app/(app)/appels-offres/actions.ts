@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { date, nombre, texte } from "@/lib/formulaire";
 import { ajouterJours } from "@/lib/calculs";
-import { PHASES_DEFAUT } from "@/lib/listes";
+import { PHASES_DEFAUT, TAUX_CAUTION_DEFINITIVE } from "@/lib/listes";
 
 function montant(formData: FormData, nom: string): number | null {
   return texte(formData, nom) == null ? null : nombre(formData, nom);
@@ -21,7 +21,7 @@ function donnees(formData: FormData) {
     dateLimite: date(formData, "dateLimite") ?? new Date(),
     montantEstime: montant(formData, "montantEstime"),
     montantSoumis: montant(formData, "montantSoumis"),
-    cautionProvisoire: montant(formData, "cautionProvisoire"),
+    tauxTva: nombre(formData, "tauxTva", 20),
     statut: texte(formData, "statut") ?? "Veille",
     responsableId: texte(formData, "responsableId"),
     notes: texte(formData, "notes"),
@@ -74,12 +74,60 @@ export async function convertirEnProjet(id: string) {
       debut,
       fin: ajouterJours(debut, 180),
       budget: ao.montantSoumis ?? ao.montantEstime ?? 0,
+      tauxTva: ao.tauxTva,
       description: `Projet issu de l'appel d'offres ${ao.reference} (${ao.procedure}).`,
       phases: { create: PHASES_DEFAUT.map((nom, ordre) => ({ nom, ordre })) },
     },
   });
   await prisma.appelOffre.update({ where: { id }, data: { statut: "Gagné", projetId: projet.id } });
+  // Marché gagné : la caution définitive est à émettre (montant usuel, à ajuster selon le CPS).
+  const montantMarche = ao.montantSoumis ?? ao.montantEstime;
+  if (montantMarche) {
+    await prisma.caution.create({
+      data: {
+        appelOffreId: id,
+        type: "Définitive",
+        montant: Math.round(montantMarche * TAUX_CAUTION_DEFINITIVE),
+        statut: "À émettre",
+        notes: "Créée automatiquement à 3 % du marché : vérifier le taux prévu au CPS.",
+      },
+    });
+  }
   revalider();
   revalidatePath("/projets");
   redirect(`/projets/${projet.id}/modifier`);
 }
+
+// ---------- Cautions ----------
+
+export async function ajouterCaution(appelOffreId: string, formData: FormData) {
+  const montantSaisi = nombre(formData, "montant");
+  if (montantSaisi <= 0) return;
+  await prisma.caution.create({
+    data: {
+      appelOffreId,
+      type: texte(formData, "type") ?? "Provisoire",
+      montant: montantSaisi,
+      banque: texte(formData, "banque"),
+      reference: texte(formData, "reference"),
+      dateEmission: date(formData, "dateEmission"),
+      dateEcheance: date(formData, "dateEcheance"),
+      statut: texte(formData, "statut") ?? "À émettre",
+      notes: texte(formData, "notes"),
+    },
+  });
+  revalider();
+}
+
+export async function changerStatutCaution(id: string, formData: FormData) {
+  const statut = texte(formData, "statut");
+  if (!statut) return;
+  await prisma.caution.update({ where: { id }, data: { statut } });
+  revalider();
+}
+
+export async function supprimerCaution(id: string) {
+  await prisma.caution.delete({ where: { id } });
+  revalider();
+}
+

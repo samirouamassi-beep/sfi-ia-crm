@@ -69,6 +69,15 @@ export const STATUTS_AO = [
   "Abandonné",
 ] as const;
 
+export const TYPES_CAUTION = ["Provisoire", "Définitive", "Retenue de garantie"] as const;
+
+// Une caution reste « immobilisée » tant qu'elle n'est pas restituée (ou en mainlevée).
+export const STATUTS_CAUTION = ["À émettre", "Émise", "Déposée", "Restituée / mainlevée"] as const;
+export const CAUTION_LIBEREE = "Restituée / mainlevée";
+
+/** Taux usuel de la caution définitive (marchés publics) : à vérifier dans chaque CPS. */
+export const TAUX_CAUTION_DEFINITIVE = 0.03;
+
 export const TYPES_RISQUE = ["Risque", "Problème"] as const;
 
 export const STATUTS_RISQUE = ["Ouvert", "En traitement", "Clos"] as const;

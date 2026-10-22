@@ -167,6 +167,11 @@ export function chargeSemaine(
   return (t.chargeJours * joursOuvres(debut, fin)) / ouvres;
 }
 
+/** Montant TTC à partir d'un montant HT et d'un taux de TVA en % (20 % par défaut au Maroc). */
+export function montantTtc(ht: number, tauxTva: number): number {
+  return ht * (1 + tauxTva / 100);
+}
+
 /** Score de criticité d'un risque (probabilité × impact, de 1 à 16). */
 export function criticite(r: { probabilite: number; impact: number }): number {
   return r.probabilite * r.impact;

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { debutJour, dureeJours } from "@/lib/calculs";
-import { STATUTS_AO } from "@/lib/listes";
+import { debutJour, dureeJours, montantTtc } from "@/lib/calculs";
+import { CAUTION_LIBEREE, STATUTS_AO } from "@/lib/listes";
+import { TableauCautions } from "./Cautions";
 import {
   Badge,
   Carte,
@@ -9,6 +10,7 @@ import {
   Kpi,
   Vide,
   boutonPrincipal,
+  boutonSecondaire,
   formatDate,
   formatMontant,
   formatPourcentage,
@@ -34,6 +36,11 @@ export default async function AppelsOffresPage({
     include: { responsable: true, projet: true },
     orderBy: { dateLimite: "asc" },
   });
+  const cautionsActives = await prisma.caution.findMany({
+    where: { statut: { not: CAUTION_LIBEREE } },
+    include: { appelOffre: { select: { id: true, reference: true, maitreOuvrage: true } } },
+    orderBy: [{ dateEcheance: "asc" }],
+  });
   const auj = debutJour(new Date());
   const liste =
     statut === "en-cours" ? tous.filter((a) => EN_COURS.includes(a.statut)) : statut === "tous" ? tous : tous.filter((a) => a.statut === statut);
@@ -43,9 +50,9 @@ export default async function AppelsOffresPage({
   const perdus = tous.filter((a) => a.statut === "Perdu");
   const aDeposer = enCours.filter((a) => a.statut !== "Déposé" && a.dateLimite >= auj);
   const prochain = aDeposer[0];
-  const cautions = tous
-    .filter((a) => a.statut === "Déposé")
-    .reduce((s, a) => s + (a.cautionProvisoire ?? 0), 0);
+  const cautions = cautionsActives.reduce((s, c) => s + c.montant, 0);
+  const parType = (type: string) =>
+    cautionsActives.filter((c) => c.type === type).reduce((s, c) => s + c.montant, 0);
 
   const puce = (valeur: string, label: string) => (
     <Link
@@ -65,9 +72,14 @@ export default async function AppelsOffresPage({
         titre="Appels d'offres"
         sousTitre="Veille, préparation et suivi des offres auprès de l'ONEE, des SRM et des régies."
         actions={
-          <Link href="/appels-offres/nouveau" className={boutonPrincipal}>
-            + Nouvel appel d&apos;offres
-          </Link>
+          <>
+            <a href="/export/portefeuille" className={boutonSecondaire}>
+              Exporter Excel
+            </a>
+            <Link href="/appels-offres/nouveau" className={boutonPrincipal}>
+              + Nouvel appel d&apos;offres
+            </Link>
+          </>
         }
       />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -88,7 +100,11 @@ export default async function AppelsOffresPage({
           detail={`${gagnes.length} gagné(s) · ${perdus.length} perdu(s)`}
           ton="bon"
         />
-        <Kpi label="Cautions provisoires immobilisées" valeur={formatMontant(cautions)} detail="offres déposées en attente" />
+        <Kpi
+          label="Cautions immobilisées"
+          valeur={formatMontant(cautions)}
+          detail={`Provisoires ${formatMontant(parType("Provisoire"))} · définitives ${formatMontant(parType("Définitive"))}`}
+        />
       </div>
 
       <Carte>
@@ -105,8 +121,8 @@ export default async function AppelsOffresPage({
                 <th className={thClass}>Objet</th>
                 <th className={thClass}>Maître d&apos;ouvrage</th>
                 <th className={thClass}>Date limite</th>
-                <th className={`${thClass} text-right`}>Estimation</th>
-                <th className={`${thClass} text-right`}>Soumis</th>
+                <th className={`${thClass} text-right`}>Estimation HT</th>
+                <th className={`${thClass} text-right`}>Soumis HT</th>
                 <th className={thClass}>Responsable</th>
                 <th className={thClass}>Statut</th>
               </tr>
@@ -133,8 +149,13 @@ export default async function AppelsOffresPage({
                         <div className="text-xs text-slate-500">dans {jours} j</div>
                       )}
                     </td>
-                    <td className={`${tdClass} text-right tabular-nums`}>{formatMontant(a.montantEstime)}</td>
-                    <td className={`${tdClass} text-right tabular-nums`}>{formatMontant(a.montantSoumis)}</td>
+                    <td className={`${tdClass} whitespace-nowrap text-right tabular-nums`}>{formatMontant(a.montantEstime)}</td>
+                    <td className={`${tdClass} whitespace-nowrap text-right tabular-nums`}>
+                      {formatMontant(a.montantSoumis)}
+                      {a.montantSoumis != null && (
+                        <div className="text-xs text-slate-500">{formatMontant(montantTtc(a.montantSoumis, a.tauxTva))} TTC</div>
+                      )}
+                    </td>
                     <td className={tdClass}>{a.responsable?.nom ?? "—"}</td>
                     <td className={tdClass}>
                       <Badge ton={a.statut === "Gagné" ? "Terminé" : a.statut === "Perdu" ? "Ouvert" : a.statut === "Déposé" ? "En revue" : a.statut === "En préparation" ? "En cours" : "À faire"}>
@@ -153,6 +174,9 @@ export default async function AppelsOffresPage({
           </table>
           {liste.length === 0 && <Vide>Aucun appel d&apos;offres.</Vide>}
         </div>
+      </Carte>
+      <Carte titre={`Cautions en cours (${cautionsActives.length})`}>
+        <TableauCautions cautions={cautionsActives} avecAppelOffre />
       </Carte>
     </div>
   );

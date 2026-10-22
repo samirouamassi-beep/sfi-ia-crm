@@ -463,13 +463,21 @@ const APPELS_OFFRES = [
 async function main() {
   // `--si-vide` (utilisé au déploiement Vercel) : ne touche à rien si la base contient déjà
   // des projets, pour ne jamais écraser les données saisies.
-  // Exception : la toute première démo (générique, avant l'adaptation eau / télégestion) est
-  // remplacée, reconnue à son projet « Refonte du portail client ».
-  const ancienneDemo = await prisma.projet.count({ where: { nom: "Refonte du portail client" } });
+  // Exception : une démo d'une version précédente est remplacée. La toute première démo
+  // (générique) se reconnaît à son projet « Refonte du portail client ».
+  // Idem pour la démo eau / télégestion d'avant les dépendances et cautions (aucune dépendance).
+  const ancienneDemo =
+    (await prisma.projet.count({ where: { nom: "Refonte du portail client" } })) +
+    ((await prisma.projet.count({ where: { nom: "Télégestion de 42 réservoirs et stations de pompage" } })) > 0 &&
+    (await prisma.dependance.count()) === 0
+      ? 1
+      : 0);
   if (process.argv.includes("--si-vide") && (await prisma.projet.count()) > 0 && ancienneDemo === 0) {
     console.log("Base déjà alimentée : données de démonstration non rechargées.");
     return;
   }
+  await prisma.caution.deleteMany();
+  await prisma.dependance.deleteMany();
   await prisma.appelOffre.deleteMany();
   await prisma.temps.deleteMany();
   await prisma.depense.deleteMany();
@@ -518,6 +526,7 @@ async function main() {
     projets[p.code] = projet.id;
 
     let ordre = 0;
+    const creees: { id: string; debut: Date; fin: Date; phase: number }[] = [];
     for (const [indexPhase, ph] of p.phases.entries()) {
       const phase = await prisma.phase.create({
         data: { projetId: projet.id, nom: ph.nom, ordre: indexPhase },
@@ -542,6 +551,13 @@ async function main() {
         const statut =
           avancement >= 100 ? "Terminée" : avancement === 0 ? "À faire" : avancement >= 85 ? "En revue" : "En cours";
 
+        // Projets en retard : les tâches de la fin du planning ont glissé par rapport au
+        // planning de référence (déjà commencées : seule la fin glisse).
+        const glissement = p.retard > 0 && t.d >= 55 ? p.retard : 0;
+        const debutReel = glissement && tDebut > AUJ ? ajouterJours(tDebut, glissement) : tDebut;
+        const finReelle = ajouterJours(tFin, glissement);
+        const avecReference = p.statut !== "Cadrage";
+
         const tache = await prisma.tache.create({
           data: {
             projetId: projet.id,
@@ -551,13 +567,17 @@ async function main() {
             statut,
             priorite: t.jalon ? "Haute" : "Normale",
             jalon: !!t.jalon,
-            debut: tDebut,
-            fin: tFin,
+            debut: t.jalon ? finReelle : debutReel,
+            fin: finReelle,
             chargeJours: t.charge,
             avancement,
             ordre: ordre++,
+            baselineDebut: avecReference ? tDebut : null,
+            baselineFin: avecReference ? tFin : null,
+            baselineCharge: avecReference ? t.charge : null,
           },
         });
+        creees.push({ id: tache.id, debut: t.jalon ? finReelle : debutReel, fin: finReelle, phase: indexPhase });
 
         // Temps saisis chaque jour ouvré écoulé, au prorata de la charge planifiée.
         if (t.charge === 0) continue;
@@ -570,6 +590,19 @@ async function main() {
         }
         await prisma.temps.createMany({ data: saisies });
       }
+    }
+
+    // Dépendances : chaque tâche suit la tâche des phases précédentes qui finit juste avant elle.
+    const liens = [];
+    for (const t of creees) {
+      const avant = creees
+        .filter((x) => x.phase < t.phase && x.fin < t.debut)
+        .sort((a, b) => b.fin.getTime() - a.fin.getTime())[0];
+      if (avant) liens.push({ predecesseurId: avant.id, successeurId: t.id });
+    }
+    await prisma.dependance.createMany({ data: liens });
+    if (p.statut !== "Cadrage") {
+      await prisma.projet.update({ where: { id: projet.id }, data: { baselineLe: j(p.debut + 10) } });
     }
 
     for (const d of p.depenses) {
@@ -594,8 +627,9 @@ async function main() {
     }
   }
 
-  for (const a of APPELS_OFFRES) {
-    await prisma.appelOffre.create({
+  const BANQUES = ["Attijariwafa bank", "Bank of Africa", "Banque Populaire", "CIH Bank"];
+  for (const [i, a] of APPELS_OFFRES.entries()) {
+    const ao = await prisma.appelOffre.create({
       data: {
         reference: a.reference,
         maitreOuvrage: a.maitreOuvrage,
@@ -605,18 +639,51 @@ async function main() {
         dateLimite: j(a.jour),
         montantEstime: a.estime,
         montantSoumis: a.soumis ?? null,
-        cautionProvisoire: a.caution ?? null,
         statut: a.statut,
         responsableId: membres[a.qui].id,
         notes: a.notes,
         projetId: a.projet ? projets[a.projet] : null,
       },
     });
+    const banque = BANQUES[i % BANQUES.length];
+    if (a.caution) {
+      // Provisoire : restituée sur les marchés gagnés ; sur l'AO perdu, la restitution est
+      // en retard (montre l'alerte « relancer la mainlevée »).
+      const restituee = a.statut === "Gagné";
+      await prisma.caution.create({
+        data: {
+          appelOffreId: ao.id,
+          type: "Provisoire",
+          montant: a.caution,
+          banque,
+          reference: `CP-${2026}-${String(i + 101)}`,
+          dateEmission: j(a.jour - 5),
+          dateEcheance: a.statut === "Perdu" ? j(-5) : j(a.jour + 75),
+          statut: restituee ? "Restituée / mainlevée" : "Déposée",
+        },
+      });
+    }
+    const projetModele = PROJETS.find((p) => p.code === a.projet);
+    if (a.statut === "Gagné" && a.soumis && projetModele) {
+      // Définitive : 3 % du marché, jusqu'à la réception définitive (1 an après la provisoire).
+      await prisma.caution.create({
+        data: {
+          appelOffreId: ao.id,
+          type: "Définitive",
+          montant: Math.round(a.soumis * 0.03),
+          banque,
+          reference: `CD-${2026}-${String(i + 201)}`,
+          dateEmission: j(a.jour + 25),
+          dateEcheance: j(projetModele.fin + 365),
+          statut: "Déposée",
+        },
+      });
+    }
   }
 
   const n = await prisma.tache.count();
   const t = await prisma.temps.count();
-  console.log(`Démo prête : ${MEMBRES.length} membres, ${PROJETS.length} projets, ${APPELS_OFFRES.length} appels d'offres, ${n} tâches, ${t} saisies de temps.`);
+  console.log(`Démo prête : ${MEMBRES.length} membres, ${PROJETS.length} projets, ${APPELS_OFFRES.length} appels d'offres, ${await prisma.caution.count()} cautions, ${await prisma.dependance.count()} dépendances, ${n} tâches, ${t} saisies de temps.`);
 }
 
 main()

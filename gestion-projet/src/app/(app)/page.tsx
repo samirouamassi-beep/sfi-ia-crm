@@ -12,6 +12,7 @@ import {
   ScoreRisque,
   Vide,
   boutonPrincipal,
+  boutonSecondaire,
   formatDate,
   formatMontant,
   formatPourcentage,
@@ -68,9 +69,17 @@ export default async function TableauDeBord() {
         titre="Tableau de bord du portefeuille"
         sousTitre={`Situation au ${formatDate(aujourdhui)} · ${projets.length} projets actifs`}
         actions={
-          <Link href="/projets/nouveau" className={boutonPrincipal}>
-            + Nouveau projet
-          </Link>
+          <>
+            <a href="/export/portefeuille" className={boutonSecondaire}>
+              Exporter Excel
+            </a>
+            <Link href="/rapport" className={boutonSecondaire}>
+              Revue PDF
+            </Link>
+            <Link href="/projets/nouveau" className={boutonPrincipal}>
+              + Nouveau projet
+            </Link>
+          </>
         }
       />
 
@@ -80,7 +89,11 @@ export default async function TableauDeBord() {
           valeur={projets.length}
           detail={`${parMeteo("Vert")} vert · ${parMeteo("Orange")} orange · ${parMeteo("Rouge")} rouge`}
         />
-        <Kpi label="Montant des marchés" valeur={formatMontant(budgetTotal)} detail="projets actifs (HT)" />
+        <Kpi
+          label="Montant des marchés HT"
+          valeur={formatMontant(budgetTotal)}
+          detail={`${formatMontant(projets.reduce((s, p) => s + p.montantTtc, 0))} TTC`}
+        />
         <Kpi
           label="Consommé"
           valeur={formatMontant(consomme)}

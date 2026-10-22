@@ -11,7 +11,7 @@ type Valeurs = {
   dateLimite?: Date;
   montantEstime?: number | null;
   montantSoumis?: number | null;
-  cautionProvisoire?: number | null;
+  tauxTva?: number;
   statut?: string;
   responsableId?: string | null;
   notes?: string | null;
@@ -70,16 +70,16 @@ export function AppelOffreForm({
           <input type="date" name="dateLimite" required defaultValue={dateInput(valeurs.dateLimite)} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>Estimation MO (MAD)</label>
-          <input type="number" min="0" step="1000" name="montantEstime" defaultValue={valeurs.montantEstime ?? ""} className={inputClass} />
+          <label className={labelClass}>Estimation MO (MAD HT)</label>
+          <input type="number" min="0" step="any" name="montantEstime" defaultValue={valeurs.montantEstime ?? ""} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>Montant soumis (MAD)</label>
-          <input type="number" min="0" step="1000" name="montantSoumis" defaultValue={valeurs.montantSoumis ?? ""} className={inputClass} />
+          <label className={labelClass}>Montant soumis (MAD HT)</label>
+          <input type="number" min="0" step="any" name="montantSoumis" defaultValue={valeurs.montantSoumis ?? ""} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>Caution provisoire (MAD)</label>
-          <input type="number" min="0" step="1000" name="cautionProvisoire" defaultValue={valeurs.cautionProvisoire ?? ""} className={inputClass} />
+          <label className={labelClass}>TVA (%)</label>
+          <input type="number" min="0" max="100" step="1" name="tauxTva" defaultValue={valeurs.tauxTva ?? 20} className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Statut</label>

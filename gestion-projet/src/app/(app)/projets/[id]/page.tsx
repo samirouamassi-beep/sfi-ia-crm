@@ -8,6 +8,7 @@ import {
   avancementPrevu,
   calculerBudget,
   criticite,
+  montantTtc,
   tacheEnRetard,
 } from "@/lib/calculs";
 import {
@@ -42,6 +43,8 @@ import {
   ajouterDepense,
   ajouterPhase,
   changerStatutTache,
+  deplacerTache,
+  enregistrerReference,
   mettreAJourMeteo,
   supprimerDepense,
   supprimerPhase,
@@ -64,7 +67,10 @@ async function chargerProjet(id: string) {
     include: {
       chef: true,
       phases: { orderBy: { ordre: "asc" } },
-      taches: { include: { responsable: true }, orderBy: [{ ordre: "asc" }] },
+      taches: {
+        include: { responsable: true, predecesseurs: { include: { predecesseur: { select: { nom: true } } } } },
+        orderBy: [{ ordre: "asc" }],
+      },
       temps: { include: { membre: true } },
       depenses: { orderBy: { date: "desc" } },
       risques: { include: { responsable: true }, orderBy: { createdAt: "desc" } },
@@ -122,6 +128,12 @@ export default async function ProjetPage({
           <>
             <Link href={`/projets/${id}/taches/nouvelle`} className={boutonPrincipal}>
               + Tâche
+            </Link>
+            <a href={`/export/projets/${id}`} className={boutonSecondaire}>
+              Excel
+            </a>
+            <Link href={`/projets/${id}/rapport`} className={boutonSecondaire}>
+              Rapport PDF
             </Link>
             <Link href={`/projets/${id}/modifier`} className={boutonSecondaire}>
               Modifier
@@ -342,6 +354,7 @@ function ListeTaches({ projet }: { projet: Projet }) {
                     <th className={thClass}>Responsable</th>
                     <th className={thClass}>Début</th>
                     <th className={thClass}>Fin</th>
+                    {projet.baselineLe && <th className={`${thClass} text-right`}>Écart réf.</th>}
                     <th className={`${thClass} text-right`}>Charge</th>
                     <th className={`${thClass} w-40`}>Avancement</th>
                     <th className={thClass}>Statut</th>
@@ -355,10 +368,20 @@ function ListeTaches({ projet }: { projet: Projet }) {
                           {t.jalon && "◆ "}
                           {t.nom}
                         </Link>
+                        {t.predecesseurs.length > 0 && (
+                          <div className="text-xs text-slate-500">
+                            après : {t.predecesseurs.map((d) => d.predecesseur.nom).join(", ")}
+                          </div>
+                        )}
                       </td>
                       <td className={tdClass}>{t.responsable?.nom ?? <span className="text-slate-400">—</span>}</td>
                       <td className={`${tdClass} whitespace-nowrap`}>{formatDateCourte(t.debut)}</td>
                       <td className={`${tdClass} whitespace-nowrap`}>{formatDateCourte(t.fin)}</td>
+                      {projet.baselineLe && (
+                        <td className={`${tdClass} text-right tabular-nums`}>
+                          <EcartReference jours={ecartJours(t)} />
+                        </td>
+                      )}
                       <td className={`${tdClass} text-right tabular-nums`}>{t.jalon ? "—" : formatJours(t.chargeJours)}</td>
                       <td className={tdClass}>{!t.jalon && <Progression valeur={t.avancement} />}</td>
                       <td className={tdClass}>
@@ -400,6 +423,8 @@ function OngletGantt({ projet }: { projet: Projet }) {
     jalon: t.jalon,
     retard: tacheEnRetard(t),
     href: `/projets/${projet.id}/taches/${t.id}`,
+    baselineDebut: t.baselineDebut,
+    baselineFin: t.baselineFin,
   });
   for (const ph of projet.phases) {
     const taches = projet.taches.filter((t) => t.phaseId === ph.id);
@@ -415,13 +440,54 @@ function OngletGantt({ projet }: { projet: Projet }) {
     lignes.push(...taches.map(ligneTache));
   }
   lignes.push(...projet.taches.filter((t) => !t.phaseId).map(ligneTache));
+  const liens = projet.taches.flatMap((t) => t.predecesseurs.map((d) => ({ de: d.predecesseurId, vers: t.id })));
+  const glissement = glissementFin(projet.taches);
 
   return (
     <div className="space-y-3">
-      <LegendeGantt />
-      <Gantt lignes={lignes} />
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+        <div className="text-sm text-slate-600">
+          {projet.baselineLe ? (
+            <>
+              Planning de référence enregistré le <b>{formatDate(projet.baselineLe)}</b>
+              {glissement != null && (
+                <>
+                  {" "}· fin du projet{" "}
+                  <b className={glissement > 0 ? "text-red-600" : "text-emerald-700"}>
+                    {glissement > 0 ? `+${glissement} j` : glissement < 0 ? `${glissement} j` : "à l'heure"}
+                  </b>{" "}
+                  par rapport à la référence
+                </>
+              )}
+            </>
+          ) : (
+            "Aucun planning de référence : enregistrez-le une fois le planning validé pour suivre les glissements."
+          )}
+        </div>
+        <form action={enregistrerReference.bind(null, projet.id)}>
+          <button type="submit" className={boutonSecondaire}>
+            {projet.baselineLe ? "Mettre à jour la référence" : "Enregistrer le planning de référence"}
+          </button>
+        </form>
+      </div>
+      <LegendeGantt modifiable reference={!!projet.baselineLe} />
+      <Gantt lignes={lignes} liens={liens} deplacer={deplacerTache} />
     </div>
   );
+}
+
+/** Écart en jours entre la fin actuelle des tâches et la fin du planning de référence. */
+function glissementFin(taches: Projet["taches"]): number | null {
+  const ref = taches.filter((t) => t.baselineFin);
+  if (ref.length === 0) return null;
+  const finRef = Math.max(...ref.map((t) => t.baselineFin!.getTime()));
+  const fin = Math.max(...taches.map((t) => t.fin.getTime()));
+  return Math.round((fin - finRef) / (24 * 60 * 60 * 1000));
+}
+
+function ecartJours(t: { fin: Date; baselineFin: Date | null }): number | null {
+  if (!t.baselineFin) return null;
+  return Math.round((t.fin.getTime() - t.baselineFin.getTime()) / (24 * 60 * 60 * 1000));
 }
 
 function OngletBudget({
@@ -447,7 +513,13 @@ function OngletBudget({
         <div className="space-y-4">
           <div>
             <div className="mb-1 flex justify-between text-sm">
-              <span>Montant du marché (budget)</span>
+              <span>
+                Montant du marché HT
+                <span className="ml-2 text-xs text-slate-500">
+                  TVA {projet.tauxTva} % : {formatMontant(budget.budget * (projet.tauxTva / 100))} · TTC{" "}
+                  {formatMontant(montantTtc(budget.budget, projet.tauxTva))}
+                </span>
+              </span>
               <span className="font-medium">{formatMontant(budget.budget)}</span>
             </div>
             <div className="h-4 rounded bg-slate-100">
@@ -477,7 +549,7 @@ function OngletBudget({
             </div>
           </div>
           <p className="text-xs text-slate-500">
-            Temps passés = jours saisis × taux journalier · Reste à faire = charge restante des tâches ×
+            Montants HT (TVA récupérable sur les achats). Temps passés = jours saisis × taux journalier · Reste à faire = charge restante des tâches ×
             taux du responsable + achats prévus (dépenses datées dans le futur).
           </p>
         </div>
@@ -591,5 +663,15 @@ function OngletRisques({ projet }: { projet: Projet }) {
         </Carte>
       </div>
     </div>
+  );
+}
+
+function EcartReference({ jours }: { jours: number | null }) {
+  if (jours == null) return <span className="text-slate-400">—</span>;
+  if (jours === 0) return <span className="text-slate-500">0 j</span>;
+  return (
+    <span className={jours > 0 ? "font-medium text-red-600" : "text-emerald-700"}>
+      {jours > 0 ? `+${jours}` : jours} j
+    </span>
   );
 }

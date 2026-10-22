@@ -87,7 +87,7 @@ export default async function ProjetsPage({
                 <th className={thClass}>Priorité</th>
                 <th className={thClass}>Météo</th>
                 <th className={`${thClass} w-40`}>Avancement</th>
-                <th className={`${thClass} text-right`}>Marché</th>
+                <th className={`${thClass} text-right`}>Marché HT</th>
                 <th className={`${thClass} text-right`}>Prévision</th>
                 <th className={thClass}>Échéance</th>
               </tr>
@@ -115,7 +115,10 @@ export default async function ProjetsPage({
                   <td className={tdClass}>
                     <Progression valeur={p.avancement} prevu={p.avancementPrevu} />
                   </td>
-                  <td className={`${tdClass} text-right tabular-nums`}>{formatMontant(p.budget.budget)}</td>
+                  <td className={`${tdClass} whitespace-nowrap text-right tabular-nums`}>
+                    {formatMontant(p.budget.budget)}
+                    <div className="text-xs text-slate-500">{formatMontant(p.montantTtc)} TTC</div>
+                  </td>
                   <td
                     className={`${tdClass} text-right tabular-nums ${
                       p.budget.ecart < 0 ? "font-medium text-red-600" : ""

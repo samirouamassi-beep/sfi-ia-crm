@@ -3,6 +3,7 @@ import {
   avancementPondere,
   avancementPrevu,
   calculerBudget,
+  montantTtc,
   tacheEnRetard,
   type Budget,
 } from "@/lib/calculs";
@@ -54,6 +55,9 @@ export async function getProjetsAvecIndicateurs(where: { statut?: { in: string[]
       statut: p.statut,
       priorite: p.priorite,
       meteo: p.meteo,
+      numeroMarche: p.numeroMarche,
+      tauxTva: p.tauxTva,
+      montantTtc: montantTtc(p.budget, p.tauxTva),
       debut: p.debut,
       fin: p.fin,
       chef: p.chef,
