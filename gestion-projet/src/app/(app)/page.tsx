@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getProjetsAvecIndicateurs } from "@/lib/projets";
-import { ajouterJours, criticite, debutJour } from "@/lib/calculs";
+import { ajouterJours, criticite, debutJour, dureeJours } from "@/lib/calculs";
 import {
   Badge,
   Carte,
@@ -13,7 +13,7 @@ import {
   Vide,
   boutonPrincipal,
   formatDate,
-  formatEuros,
+  formatMontant,
   formatPourcentage,
   lienClass,
   tableClass,
@@ -28,7 +28,7 @@ export default async function TableauDeBord() {
   const aujourdhui = debutJour(new Date());
   const dans30 = ajouterJours(aujourdhui, 30);
 
-  const [projets, jalons, risques] = await Promise.all([
+  const [projets, jalons, risques, appels] = await Promise.all([
     getProjetsAvecIndicateurs({ statut: { in: actifs } }),
     prisma.tache.findMany({
       where: {
@@ -43,6 +43,12 @@ export default async function TableauDeBord() {
     prisma.risque.findMany({
       where: { statut: { not: "Clos" }, projet: { statut: { in: actifs } } },
       include: { projet: true, responsable: true },
+    }),
+    prisma.appelOffre.findMany({
+      where: { statut: { in: ["Veille", "En préparation"] }, dateLimite: { gte: aujourdhui } },
+      include: { responsable: true },
+      orderBy: { dateLimite: "asc" },
+      take: 5,
     }),
   ]);
 
@@ -74,19 +80,19 @@ export default async function TableauDeBord() {
           valeur={projets.length}
           detail={`${parMeteo("Vert")} vert · ${parMeteo("Orange")} orange · ${parMeteo("Rouge")} rouge`}
         />
-        <Kpi label="Budget engagé" valeur={formatEuros(budgetTotal)} detail="projets actifs" />
+        <Kpi label="Montant des marchés" valeur={formatMontant(budgetTotal)} detail="projets actifs (HT)" />
         <Kpi
           label="Consommé"
-          valeur={formatEuros(consomme)}
+          valeur={formatMontant(consomme)}
           detail={`${formatPourcentage(budgetTotal ? consomme / budgetTotal : 0)} du budget`}
         />
         <Kpi
           label="Prévision à terminaison"
-          valeur={formatEuros(prevision)}
+          valeur={formatMontant(prevision)}
           detail={
             prevision > budgetTotal
-              ? `Dépassement de ${formatEuros(prevision - budgetTotal)}`
-              : `Marge de ${formatEuros(budgetTotal - prevision)}`
+              ? `Dépassement de ${formatMontant(prevision - budgetTotal)}`
+              : `Marge de ${formatMontant(budgetTotal - prevision)}`
           }
           ton={prevision > budgetTotal ? "danger" : "bon"}
         />
@@ -141,7 +147,7 @@ export default async function TableauDeBord() {
                       }
                     />
                     <div className="text-xs text-slate-500">
-                      {formatEuros(p.budget.consomme)} / {formatEuros(p.budget.budget)}
+                      {formatMontant(p.budget.consomme)} / {formatMontant(p.budget.budget)}
                     </div>
                   </td>
                   <td className={tdClass}>
@@ -182,7 +188,45 @@ export default async function TableauDeBord() {
         </p>
       </Carte>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Carte
+          titre="Appels d'offres à déposer"
+          action={
+            <Link href="/appels-offres" className="text-xs text-indigo-700 hover:underline">
+              Tout voir
+            </Link>
+          }
+        >
+          {appels.length === 0 ? (
+            <Vide>Aucun dépôt à venir.</Vide>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {appels.map((a) => {
+                const jours = dureeJours(aujourdhui, a.dateLimite) - 1;
+                return (
+                  <li key={a.id} className="flex items-start justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <Link href={`/appels-offres/${a.id}`} className="text-sm font-medium hover:text-indigo-700">
+                        {a.objet}
+                      </Link>
+                      <div className="text-xs text-slate-500">
+                        {a.maitreOuvrage} · {formatMontant(a.montantEstime)}
+                      </div>
+                    </div>
+                    <span
+                      className={`whitespace-nowrap text-sm ${
+                        jours <= 7 ? "font-medium text-red-600" : "text-slate-700"
+                      }`}
+                    >
+                      J-{jours}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Carte>
+
         <Carte titre="Jalons des 30 prochains jours">
           {jalons.length === 0 ? (
             <Vide>Aucun jalon à venir.</Vide>

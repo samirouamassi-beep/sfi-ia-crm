@@ -6,7 +6,7 @@ import {
   Carte,
   EnTete,
   Progression,
-  formatEuros,
+  formatMontant,
   formatJours,
   lienClass,
   tableClass,
@@ -64,7 +64,7 @@ export default async function EquipePage() {
                     <td className={tdClass}>
                       <Badge>{m.role}</Badge>
                     </td>
-                    <td className={`${tdClass} text-right tabular-nums`}>{formatEuros(m.tauxJournalier)}</td>
+                    <td className={`${tdClass} text-right tabular-nums`}>{formatMontant(m.tauxJournalier)}</td>
                     <td className={`${tdClass} text-right tabular-nums`}>{formatJours(m.capaciteJours)}/sem.</td>
                     <td className={`${tdClass} text-right tabular-nums`}>
                       <Link href={`/mes-taches?membre=${m.id}`} className="hover:underline">

@@ -7,6 +7,7 @@ export type LienNav = { href: string; label: string; icone: string };
 
 // Icônes : tracés SVG 24x24 (style trait), pour éviter une dépendance.
 const ICONES: Record<string, string> = {
+  ao: "M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6zM14 3v6h6M8 13h8M8 17h5",
   accueil: "M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10",
   projets: "M3 7h18M3 12h18M3 17h12",
   planning: "M4 6h8M8 11h10M6 16h7M3 3v18",

@@ -1,5 +1,6 @@
-// Données de démonstration : une équipe, 5 projets à différents stades, des temps saisis,
-// des dépenses et des risques. Les dates sont calculées par rapport à aujourd'hui pour que
+// Données de démonstration (fictives) d'un intégrateur télégestion / automatisme / mesures
+// pour l'ONEE, les SRM et les régies : équipe, appels d'offres, 5 projets à différents stades,
+// temps saisis, dépenses et risques. Les dates sont calculées par rapport à aujourd'hui pour que
 // la démo paraisse toujours « vivante ». Relancer `npm run seed` remet la base à zéro.
 
 import "dotenv/config";
@@ -14,16 +15,18 @@ const prisma = new PrismaClient({
 const AUJ = debutJour(new Date());
 const j = (n: number) => ajouterJours(AUJ, n);
 
+// Équipe type d'un intégrateur télégestion / automatisme / instrumentation (coûts
+// journaliers internes en DH). Toutes les données ci-dessous sont fictives.
 const MEMBRES = [
-  { cle: "claire", nom: "Claire Martin", role: "Directeur de programme", taux: 950 },
-  { cle: "thomas", nom: "Thomas Bernard", role: "Chef de projet", taux: 800 },
-  { cle: "sophie", nom: "Sophie Dubois", role: "Chef de projet", taux: 780 },
-  { cle: "karim", nom: "Karim Haddad", role: "Architecte", taux: 900 },
-  { cle: "julie", nom: "Julie Moreau", role: "Développeur", taux: 620 },
-  { cle: "lucas", nom: "Lucas Petit", role: "Développeur", taux: 600 },
-  { cle: "emma", nom: "Emma Leroy", role: "Designer", taux: 650 },
-  { cle: "nicolas", nom: "Nicolas Roux", role: "Consultant", taux: 720 },
-  { cle: "ines", nom: "Inès Garnier", role: "Testeur", taux: 550 },
+  { cle: "youssef", nom: "Youssef El Amrani", role: "Directeur technique", taux: 4500 },
+  { cle: "hicham", nom: "Hicham Benali", role: "Chef de projet", taux: 3500 },
+  { cle: "salma", nom: "Salma Idrissi", role: "Chef de projet", taux: 3500 },
+  { cle: "omar", nom: "Omar Tazi", role: "Ingénieur SCADA / télégestion", taux: 3000 },
+  { cle: "nadia", nom: "Nadia Chraibi", role: "Ingénieur automaticien", taux: 2800 },
+  { cle: "rachid", nom: "Rachid Ouazzani", role: "Technicien instrumentation", taux: 1600 },
+  { cle: "khalid", nom: "Khalid Bennani", role: "Technicien détection de fuites", taux: 1600 },
+  { cle: "mehdi", nom: "Mehdi Fassi", role: "Technicien de chantier", taux: 1400 },
+  { cle: "imane", nom: "Imane Alaoui", role: "Chargé d'études / AO", taux: 2500 },
 ];
 
 type TacheModele = {
@@ -39,6 +42,7 @@ type ProjetModele = {
   code: string;
   nom: string;
   client: string;
+  numeroMarche: string;
   description: string;
   chef: string;
   statut: string;
@@ -46,7 +50,7 @@ type ProjetModele = {
   meteo: string;
   debut: number;
   fin: number;
-  budget: number;
+  budget: number; // montant du marché (DH HT)
   commentaire: string;
   retard: number; // points d'avancement de retard par rapport au planning
   surconso: number; // coefficient appliqué aux temps saisis (1.2 = 20 % de dépassement)
@@ -66,269 +70,407 @@ type ProjetModele = {
 const PROJETS: ProjetModele[] = [
   {
     code: "PRJ-001",
-    nom: "Refonte du portail client",
-    client: "Groupe Hexa",
+    nom: "Télégestion de 42 réservoirs et stations de pompage",
+    client: "SRM Marrakech-Safi",
+    numeroMarche: "18/2026/SRM-MS",
     description:
-      "Nouvelle version du portail client : espace personnel, suivi des commandes, paiement en ligne et support intégré.",
-    chef: "thomas",
+      "Équipement de 42 sites (réservoirs, stations de pompage, bâches) en postes locaux de télégestion : RTU, capteurs de niveau et de pression, débitmètres, communication GSM/4G et supervision SCADA centralisée au poste de commande.",
+    chef: "hicham",
     statut: "En cours",
     priorite: "Haute",
     meteo: "Vert",
-    debut: -60,
-    fin: 75,
-    budget: 125000,
-    commentaire: "Sprint 3 livré dans les temps. Recette métier planifiée avec le client.",
+    debut: -70,
+    fin: 90,
+    budget: 5200000,
+    commentaire:
+      "28 sites sur 42 équipés. Approvisionnement RTU soldé. Essais de communication 4G concluants sur la zone d'Al Haouz.",
     retard: 0,
     surconso: 0.95,
     phases: [
       {
-        nom: "Cadrage",
+        nom: "Études et validation",
         taches: [
-          { nom: "Ateliers de recueil du besoin", d: 0, f: 8, charge: 8, qui: "thomas" },
-          { nom: "Rédaction des spécifications", d: 6, f: 15, charge: 10, qui: "nicolas" },
-          { nom: "Validation du cahier des charges", d: 15, f: 15, charge: 0, qui: "thomas", jalon: true },
+          { nom: "Relevés et visites des 42 sites", d: 0, f: 10, charge: 24, qui: "mehdi" },
+          { nom: "Architecture télégestion et plan de communication", d: 4, f: 14, charge: 12, qui: "omar" },
+          { nom: "Validation des études par le maître d'ouvrage", d: 15, f: 15, charge: 0, qui: "hicham", jalon: true },
         ],
       },
       {
-        nom: "Conception",
+        nom: "Approvisionnement",
         taches: [
-          { nom: "Maquettes UX/UI", d: 12, f: 28, charge: 18, qui: "emma" },
-          { nom: "Architecture technique", d: 14, f: 26, charge: 10, qui: "karim" },
+          { nom: "Commande et réception RTU, capteurs et armoires", d: 14, f: 32, charge: 6, qui: "hicham" },
         ],
       },
       {
-        nom: "Réalisation",
+        nom: "Installation sur sites",
         taches: [
-          { nom: "Espace personnel et authentification", d: 28, f: 45, charge: 22, qui: "julie" },
-          { nom: "Suivi des commandes", d: 38, f: 58, charge: 25, qui: "lucas" },
-          { nom: "Paiement en ligne", d: 50, f: 70, charge: 20, qui: "julie" },
-          { nom: "Module support et chat", d: 60, f: 78, charge: 15, qui: "lucas" },
+          { nom: "Pose capteurs de niveau et de pression (lot 1 : 21 sites)", d: 30, f: 52, charge: 42, qui: "rachid" },
+          { nom: "Pose capteurs et armoires (lot 2 : 21 sites)", d: 48, f: 72, charge: 42, qui: "mehdi" },
         ],
       },
       {
-        nom: "Recette et déploiement",
+        nom: "Programmation et intégration",
         taches: [
-          { nom: "Recette fonctionnelle", d: 75, f: 90, charge: 16, qui: "ines" },
-          { nom: "Formation des équipes client", d: 88, f: 95, charge: 5, qui: "nicolas" },
-          { nom: "Mise en production", d: 100, f: 100, charge: 0, qui: "thomas", jalon: true },
+          { nom: "Programmation des RTU et tables d'échange", d: 32, f: 62, charge: 30, qui: "nadia" },
+          { nom: "Synoptiques et alarmes du SCADA central", d: 40, f: 75, charge: 32, qui: "omar" },
         ],
+      },
+      {
+        nom: "Essais et mise en service",
+        taches: [
+          { nom: "Essais site par site et tests d'alarmes", d: 70, f: 90, charge: 26, qui: "rachid" },
+          { nom: "Formation des exploitants", d: 88, f: 95, charge: 6, qui: "omar" },
+        ],
+      },
+      {
+        nom: "Réception",
+        taches: [{ nom: "Réception provisoire", d: 100, f: 100, charge: 0, qui: "hicham", jalon: true }],
       },
     ],
     depenses: [
-      { libelle: "Licences outil de design", categorie: "Licences", montant: 1800, jour: -55 },
-      { libelle: "Passerelle de paiement (frais d'intégration)", categorie: "Sous-traitance", montant: 6500, jour: -10 },
+      { libelle: "42 RTU et modules 4G", categorie: "Automates et RTU", montant: 1260000, jour: -45 },
+      { libelle: "Capteurs de niveau radar et transmetteurs de pression", categorie: "Instrumentation et capteurs", montant: 880000, jour: -42 },
+      { libelle: "Licence SCADA serveur + 2 postes", categorie: "Licences SCADA", montant: 260000, jour: -40 },
+      { libelle: "Abonnements data 4G (12 mois)", categorie: "Télécom (GSM/radio/fibre)", montant: 95000, jour: -30 },
+      { libelle: "Génie civil : socles et regards (sous-traitance)", categorie: "Génie civil et sous-traitance", montant: 420000, jour: -15 },
+      { libelle: "Caution définitive (frais bancaires)", categorie: "Cautions et frais de marché", montant: 38000, jour: -68 },
+      { libelle: "Débitmètres et armoires du lot 2 (21 sites)", categorie: "Instrumentation et capteurs", montant: 620000, jour: 20 },
     ],
     risques: [
-      { type: "Risque", titre: "Disponibilité des référents métier pour la recette", p: 2, i: 3, statut: "Ouvert", qui: "thomas", mitigation: "Planning de recette validé en comité, créneaux bloqués dans les agendas." },
-      { type: "Risque", titre: "Évolution des exigences PSP sur le paiement", p: 1, i: 3, statut: "En traitement", qui: "karim", mitigation: "Veille avec le prestataire, abstraction de la couche paiement." },
+      { type: "Risque", titre: "Couverture 4G insuffisante sur 6 sites de montagne", p: 3, i: 3, statut: "En traitement", qui: "omar", mitigation: "Liaison radio de secours sur les sites concernés, étude de propagation en cours." },
+      { type: "Risque", titre: "Accès aux sites conditionné par les équipes d'exploitation", p: 2, i: 2, statut: "Ouvert", qui: "hicham", mitigation: "Planning hebdomadaire partagé avec le centre d'exploitation." },
     ],
   },
   {
     code: "PRJ-002",
-    nom: "Déploiement ERP Finance",
-    client: "Direction financière",
+    nom: "Sectorisation et détection de fuites du réseau de distribution",
+    client: "RADEEF (Régie de Fès)",
+    numeroMarche: "07/2026/RADEEF",
     description:
-      "Déploiement du module comptabilité et contrôle de gestion de l'ERP sur 4 entités, reprise des données et conduite du changement.",
-    chef: "sophie",
+      "Découpage du réseau en 24 secteurs hydrauliques, pose de débitmètres de sectorisation, campagne de prélocalisation acoustique et corrélation, localisation des fuites et rapport de rendement (bilan hydraulique, ILI).",
+    chef: "salma",
     statut: "En cours",
     priorite: "Critique",
     meteo: "Orange",
-    debut: -120,
-    fin: 45,
-    budget: 260000,
+    debut: -110,
+    fin: 50,
+    budget: 3400000,
     commentaire:
-      "Reprise des données plus longue que prévu sur l'entité Sud. Plan de rattrapage en cours, jalon de bascule à sécuriser.",
+      "Corrélateurs acoustiques bloqués 3 semaines en dédouanement : la campagne de localisation a glissé. Plan de rattrapage avec une équipe de nuit à valider en réunion de chantier.",
     retard: 12,
     surconso: 1.08,
     phases: [
       {
-        nom: "Analyse",
+        nom: "Études et validation",
         taches: [
-          { nom: "Audit des processus financiers", d: 0, f: 12, charge: 20, qui: "nicolas" },
-          { nom: "Paramétrage cible (fit-gap)", d: 10, f: 25, charge: 24, qui: "sophie" },
-          { nom: "Comité de validation du design", d: 25, f: 25, charge: 0, qui: "claire", jalon: true },
+          { nom: "Analyse des plans réseau et données de production", d: 0, f: 12, charge: 14, qui: "omar" },
+          { nom: "Définition des 24 secteurs et points de comptage", d: 8, f: 22, charge: 16, qui: "salma" },
+          { nom: "Validation du plan de sectorisation", d: 22, f: 22, charge: 0, qui: "youssef", jalon: true },
         ],
       },
       {
-        nom: "Construction",
+        nom: "Installation sur sites",
         taches: [
-          { nom: "Paramétrage plan comptable et analytique", d: 25, f: 50, charge: 35, qui: "nicolas" },
-          { nom: "Interfaces banques et paie", d: 30, f: 60, charge: 30, qui: "karim" },
-          { nom: "Reprise des données entité Nord", d: 45, f: 62, charge: 18, qui: "lucas" },
-          { nom: "Reprise des données entité Sud", d: 50, f: 70, charge: 22, qui: "lucas" },
+          { nom: "Génie civil des chambres de comptage", d: 22, f: 45, charge: 30, qui: "mehdi" },
+          { nom: "Pose des débitmètres électromagnétiques de secteur", d: 35, f: 58, charge: 28, qui: "rachid" },
         ],
       },
       {
-        nom: "Tests",
+        nom: "Campagne de détection",
         taches: [
-          { nom: "Tests d'intégration", d: 62, f: 78, charge: 20, qui: "ines" },
-          { nom: "Recette utilisateurs", d: 75, f: 88, charge: 18, qui: "sophie" },
+          { nom: "Prélocalisation acoustique (enregistreurs de bruit)", d: 50, f: 70, charge: 36, qui: "khalid" },
+          { nom: "Corrélation et localisation des fuites", d: 60, f: 85, charge: 40, qui: "khalid" },
+          { nom: "Mesure des débits de nuit par secteur", d: 55, f: 80, charge: 18, qui: "rachid" },
         ],
       },
       {
-        nom: "Bascule",
+        nom: "Réception",
         taches: [
-          { nom: "Formation des utilisateurs clés", d: 82, f: 94, charge: 12, qui: "nicolas" },
-          { nom: "Bascule en production", d: 96, f: 96, charge: 0, qui: "sophie", jalon: true },
-          { nom: "Support post-démarrage", d: 96, f: 100, charge: 8, qui: "julie" },
+          { nom: "Bilan hydraulique et rapport de rendement (ILI)", d: 82, f: 95, charge: 14, qui: "omar" },
+          { nom: "Réception provisoire", d: 97, f: 97, charge: 0, qui: "salma", jalon: true },
         ],
       },
     ],
     depenses: [
-      { libelle: "Licences ERP (année 1)", categorie: "Licences", montant: 42000, jour: -110 },
-      { libelle: "Expert intégrateur ERP", categorie: "Sous-traitance", montant: 28000, jour: -60 },
-      { libelle: "Déplacements sites régionaux", categorie: "Déplacements", montant: 3400, jour: -30 },
+      { libelle: "24 débitmètres électromagnétiques DN100 à DN400", categorie: "Instrumentation et capteurs", montant: 860000, jour: -70 },
+      { libelle: "Enregistreurs de bruit et corrélateur acoustique", categorie: "Instrumentation et capteurs", montant: 640000, jour: -45 },
+      { libelle: "Chambres de comptage (sous-traitance génie civil)", categorie: "Génie civil et sous-traitance", montant: 450000, jour: -55 },
+      { libelle: "Frais de dédouanement et transit", categorie: "Transport et déplacements", montant: 42000, jour: -25 },
+      { libelle: "Location d'un corrélateur de secours", categorie: "Instrumentation et capteurs", montant: 60000, jour: 5 },
+      { libelle: "Logiciel de modélisation hydraulique (licence)", categorie: "Licences SCADA", montant: 90000, jour: 30 },
     ],
     risques: [
-      { type: "Problème", titre: "Qualité des données historiques entité Sud", p: 4, i: 3, statut: "En traitement", qui: "lucas", mitigation: "Nettoyage en binôme avec la comptabilité Sud, scripts de contrôle automatisés." },
-      { type: "Risque", titre: "Bascule pendant la clôture trimestrielle", p: 3, i: 4, statut: "Ouvert", qui: "sophie", mitigation: "Étudier un décalage de la bascule de 2 semaines, arbitrage en comité de pilotage." },
-      { type: "Risque", titre: "Résistance au changement des équipes comptables", p: 2, i: 2, statut: "Ouvert", qui: "nicolas", mitigation: "Ambassadeurs par entité, sessions de démonstration anticipées." },
+      { type: "Problème", titre: "Retard de dédouanement des corrélateurs acoustiques", p: 4, i: 3, statut: "En traitement", qui: "salma", mitigation: "Location d'un corrélateur en attendant, équipe de nuit pour rattraper la campagne." },
+      { type: "Risque", titre: "Autorisations de coupure d'eau pour la pose des débitmètres", p: 3, i: 3, statut: "Ouvert", qui: "rachid", mitigation: "Demandes groupées à la régie, interventions la nuit." },
+      { type: "Risque", titre: "Bruit de circulation perturbant l'écoute en centre-ville", p: 2, i: 2, statut: "Ouvert", qui: "khalid", mitigation: "Écoute entre 1 h et 4 h du matin." },
     ],
   },
   {
     code: "PRJ-003",
-    nom: "Migration infrastructure Cloud",
-    client: "DSI",
+    nom: "Analyseurs en ligne de la qualité de l'eau (chlore, pH, turbidité)",
+    client: "ONEE – Branche Eau",
+    numeroMarche: "52/2026/ONEE-BE",
     description:
-      "Migration de 40 applications du datacenter vers le cloud, sécurisation et mise en place de la supervision.",
-    chef: "thomas",
+      "Fourniture, installation et intégration en télégestion d'analyseurs multiparamètres (chlore résiduel, pH, turbidité, conductivité, température) sur 15 stations de traitement et de reprise.",
+    chef: "hicham",
     statut: "En cours",
     priorite: "Haute",
     meteo: "Rouge",
     debut: -90,
     fin: 30,
-    budget: 115000,
+    budget: 2600000,
     commentaire:
-      "Dépassement budgétaire lié à la refonte imprévue de 6 applications legacy. Arbitrage demandé : rallonge budgétaire ou réduction du périmètre.",
+      "Dépassement prévisionnel : 4 stations nécessitent des cabines d'analyse et des pompes d'échantillonnage non prévues au bordereau des prix. Avenant à négocier avec l'ONEE, sinon réduction du périmètre.",
     retard: 18,
     surconso: 1.4,
     phases: [
       {
-        nom: "Préparation",
+        nom: "Études et validation",
         taches: [
-          { nom: "Inventaire applicatif", d: 0, f: 12, charge: 10, qui: "karim" },
-          { nom: "Landing zone et sécurité", d: 10, f: 30, charge: 18, qui: "karim" },
+          { nom: "Audit des points de prélèvement des 15 stations", d: 0, f: 12, charge: 12, qui: "rachid" },
+          { nom: "Note de calcul et fiches techniques analyseurs", d: 8, f: 25, charge: 10, qui: "nadia" },
         ],
       },
       {
-        nom: "Migration",
+        nom: "Installation sur sites",
         taches: [
-          { nom: "Vague 1 : applications web", d: 28, f: 50, charge: 25, qui: "julie" },
-          { nom: "Vague 2 : applications métier", d: 48, f: 75, charge: 30, qui: "lucas" },
-          { nom: "Vague 3 : applications legacy", d: 70, f: 92, charge: 28, qui: "karim" },
-          { nom: "Fin des migrations", d: 92, f: 92, charge: 0, qui: "thomas", jalon: true },
+          { nom: "Installation des analyseurs (stations 1 à 8)", d: 28, f: 55, charge: 24, qui: "rachid" },
+          { nom: "Installation des analyseurs (stations 9 à 15)", d: 50, f: 80, charge: 24, qui: "mehdi" },
         ],
       },
       {
-        nom: "Exploitation",
+        nom: "Programmation et intégration",
         taches: [
-          { nom: "Supervision et alerting", d: 60, f: 90, charge: 12, qui: "julie" },
-          { nom: "Décommissionnement datacenter", d: 90, f: 100, charge: 8, qui: "karim" },
+          { nom: "Remontée des mesures et seuils d'alarme dans le SCADA", d: 45, f: 85, charge: 26, qui: "omar" },
+          { nom: "Fin d'intégration des 15 stations", d: 88, f: 88, charge: 0, qui: "hicham", jalon: true },
+        ],
+      },
+      {
+        nom: "Essais et mise en service",
+        taches: [
+          { nom: "Étalonnage et comparaison avec analyses laboratoire", d: 80, f: 95, charge: 14, qui: "rachid" },
+          { nom: "Réception provisoire", d: 100, f: 100, charge: 0, qui: "hicham", jalon: true },
         ],
       },
     ],
     depenses: [
-      { libelle: "Consommation cloud (environnements de test)", categorie: "Autre", montant: 9800, jour: -40 },
-      { libelle: "Audit de sécurité externe", categorie: "Sous-traitance", montant: 12000, jour: -50 },
+      { libelle: "15 analyseurs multiparamètres (chlore, pH, turbidité, conductivité)", categorie: "Instrumentation et capteurs", montant: 1780000, jour: -60 },
+      { libelle: "Cabines d'analyse et pompes d'échantillonnage (hors bordereau)", categorie: "Instrumentation et capteurs", montant: 480000, jour: -20 },
+      { libelle: "Réactifs et kits d'étalonnage", categorie: "Instrumentation et capteurs", montant: 85000, jour: -15 },
+      { libelle: "Déplacements stations (Oriental et Saïss)", categorie: "Transport et déplacements", montant: 64000, jour: -10 },
     ],
     risques: [
-      { type: "Problème", titre: "Applications legacy non compatibles", p: 4, i: 4, statut: "Ouvert", qui: "karim", mitigation: "Refonte partielle ou conteneurisation, chiffrage en cours." },
-      { type: "Risque", titre: "Coupure de service pendant la vague 3", p: 2, i: 4, statut: "Ouvert", qui: "thomas", mitigation: "Bascules la nuit et le week-end, plan de retour arrière testé." },
+      { type: "Problème", titre: "Travaux hors bordereau sur 4 stations (cabines d'analyse)", p: 4, i: 4, statut: "Ouvert", qui: "hicham", mitigation: "Ordre de service et avenant à négocier avec l'ONEE, chiffrage remis." },
+      { type: "Risque", titre: "Dérive des mesures de chlore sans maintenance régulière", p: 3, i: 3, statut: "Ouvert", qui: "rachid", mitigation: "Proposer un contrat de maintenance préventive trimestriel." },
     ],
   },
   {
     code: "PRJ-004",
-    nom: "Application mobile terrain",
-    client: "Groupe Hexa",
+    nom: "Automatisation de la station de traitement et des forages",
+    client: "SRM Casablanca-Settat",
+    numeroMarche: "31/2026/SRM-CS",
     description:
-      "Application mobile pour les techniciens d'intervention : planning, rapports d'intervention, photos et signature client.",
-    chef: "sophie",
+      "Automatisation de la station de traitement (filtration, chloration) et de 9 forages : automates, variateurs, analyse en continu et intégration au SCADA de la SRM.",
+    chef: "salma",
     statut: "Cadrage",
     priorite: "Normale",
     meteo: "Vert",
     debut: -5,
-    fin: 150,
-    budget: 62000,
-    commentaire: "Kick-off réalisé. Ateliers utilisateurs avec les techniciens la semaine prochaine.",
+    fin: 160,
+    budget: 4100000,
+    commentaire: "Ordre de service reçu. Réunion de démarrage tenue, visites des forages planifiées.",
     retard: 0,
     surconso: 1,
     phases: [
       {
-        nom: "Cadrage",
+        nom: "Études et validation",
         taches: [
-          { nom: "Kick-off et organisation", d: 0, f: 3, charge: 2, qui: "sophie" },
-          { nom: "Ateliers utilisateurs terrain", d: 3, f: 12, charge: 6, qui: "emma" },
-          { nom: "Go / No go conception", d: 14, f: 14, charge: 0, qui: "sophie", jalon: true },
+          { nom: "Réunion de démarrage et planning détaillé", d: 0, f: 3, charge: 3, qui: "salma" },
+          { nom: "Visites des 9 forages et de la station", d: 2, f: 10, charge: 10, qui: "nadia" },
+          { nom: "Analyse fonctionnelle et schémas électriques", d: 8, f: 22, charge: 18, qui: "nadia" },
+          { nom: "Validation des études d'exécution", d: 24, f: 24, charge: 0, qui: "salma", jalon: true },
         ],
       },
       {
         nom: "Réalisation",
         taches: [
-          { nom: "Design de l'application", d: 14, f: 30, charge: 14, qui: "emma" },
-          { nom: "Développement mode hors-ligne", d: 30, f: 65, charge: 30, qui: "julie" },
-          { nom: "Rapports d'intervention et signature", d: 40, f: 75, charge: 25, qui: "lucas" },
+          { nom: "Fabrication et tests des armoires en atelier", d: 25, f: 50, charge: 30, qui: "mehdi" },
+          { nom: "Programmation automates et variateurs", d: 40, f: 70, charge: 35, qui: "nadia" },
+          { nom: "Intégration au SCADA de la SRM", d: 65, f: 85, charge: 20, qui: "omar" },
         ],
       },
       {
-        nom: "Déploiement",
+        nom: "Réception",
         taches: [
-          { nom: "Pilote sur une agence", d: 78, f: 90, charge: 10, qui: "ines" },
-          { nom: "Généralisation", d: 100, f: 100, charge: 0, qui: "sophie", jalon: true },
+          { nom: "Essais de fonctionnement et mise en service", d: 85, f: 97, charge: 15, qui: "nadia" },
+          { nom: "Réception provisoire", d: 100, f: 100, charge: 0, qui: "salma", jalon: true },
         ],
       },
     ],
-    depenses: [],
+    depenses: [
+      { libelle: "Armoires électriques station et forages", categorie: "Automates et RTU", montant: 520000, jour: 35 },
+      { libelle: "Automates et cartes d'entrées/sorties", categorie: "Automates et RTU", montant: 780000, jour: 40 },
+      { libelle: "9 variateurs de vitesse pompes de forage", categorie: "Automates et RTU", montant: 690000, jour: 45 },
+      { libelle: "Analyseurs chlore et turbidité de la station", categorie: "Instrumentation et capteurs", montant: 420000, jour: 60 },
+      { libelle: "Génie civil local électrique (sous-traitance)", categorie: "Génie civil et sous-traitance", montant: 300000, jour: 70 },
+      { libelle: "Licences SCADA (extension)", categorie: "Licences SCADA", montant: 150000, jour: 100 },
+    ],
     risques: [
-      { type: "Risque", titre: "Couverture réseau faible sur certains sites", p: 3, i: 2, statut: "Ouvert", qui: "julie", mitigation: "Mode hors-ligne complet avec synchronisation différée." },
+      { type: "Risque", titre: "Délais de livraison des variateurs de vitesse (12 semaines)", p: 3, i: 2, statut: "Ouvert", qui: "salma", mitigation: "Commande anticipée dès la validation des études." },
     ],
   },
   {
     code: "PRJ-005",
-    nom: "Mise en conformité RGPD",
-    client: "Direction juridique",
-    description: "Cartographie des traitements, registre, mise à jour des contrats et sensibilisation.",
-    chef: "claire",
+    nom: "Extension et maintenance du système SCADA",
+    client: "RADEEMA (Régie de Marrakech)",
+    numeroMarche: "11/2025/RADEEMA",
+    description: "Mise à niveau du serveur SCADA, intégration de 12 nouveaux sites et maintenance préventive annuelle.",
+    chef: "youssef",
     statut: "Terminé",
     priorite: "Normale",
     meteo: "Vert",
-    debut: -200,
-    fin: -20,
-    budget: 42000,
-    commentaire: "Projet clôturé. Registre remis au DPO.",
+    debut: -220,
+    fin: -25,
+    budget: 820000,
+    commentaire: "Réception provisoire prononcée. Période de garantie en cours.",
     retard: 0,
     surconso: 0.9,
     phases: [
       {
-        nom: "Diagnostic",
+        nom: "Réalisation",
         taches: [
-          { nom: "Cartographie des traitements", d: 0, f: 30, charge: 15, qui: "nicolas" },
-          { nom: "Analyse des écarts", d: 25, f: 45, charge: 10, qui: "claire" },
+          { nom: "Migration du serveur SCADA", d: 0, f: 20, charge: 12, qui: "omar" },
+          { nom: "Intégration des 12 nouveaux sites", d: 20, f: 60, charge: 28, qui: "omar" },
+          { nom: "Maintenance préventive des postes locaux", d: 40, f: 90, charge: 30, qui: "rachid" },
         ],
       },
       {
-        nom: "Mise en conformité",
+        nom: "Réception",
         taches: [
-          { nom: "Registre des traitements", d: 45, f: 70, charge: 12, qui: "nicolas" },
-          { nom: "Mise à jour des contrats sous-traitants", d: 50, f: 85, charge: 8, qui: "claire" },
-          { nom: "Sensibilisation des collaborateurs", d: 80, f: 98, charge: 6, qui: "nicolas" },
-          { nom: "Remise du registre au DPO", d: 100, f: 100, charge: 0, qui: "claire", jalon: true },
+          { nom: "Dossier des ouvrages exécutés (DOE)", d: 88, f: 98, charge: 6, qui: "youssef" },
+          { nom: "Réception provisoire", d: 100, f: 100, charge: 0, qui: "youssef", jalon: true },
         ],
       },
     ],
-    depenses: [{ libelle: "Plateforme e-learning", categorie: "Formation", montant: 2500, jour: -60 }],
-    risques: [
-      { type: "Risque", titre: "Sous-traitants non coopératifs", p: 2, i: 2, statut: "Clos", qui: "claire", mitigation: "Relances juridiques, avenants types." },
+    depenses: [
+      { libelle: "Serveur et licences SCADA (mise à niveau)", categorie: "Licences SCADA", montant: 210000, jour: -200 },
+      { libelle: "Pièces de rechange postes locaux", categorie: "Automates et RTU", montant: 160000, jour: -120 },
     ],
+    risques: [
+      { type: "Risque", titre: "Interruption de supervision pendant la migration", p: 2, i: 3, statut: "Clos", qui: "omar", mitigation: "Migration de nuit avec serveur de secours." },
+    ],
+  },
+];
+
+// Appels d'offres en cours et passés. `projet` relie un AO gagné au projet qui en est issu.
+const APPELS_OFFRES = [
+  {
+    reference: "AO 64/2026/ONEE-BE",
+    maitreOuvrage: "ONEE – Branche Eau",
+    objet: "Fourniture et pose de débitmètres électromagnétiques sur adductions régionales",
+    procedure: "AO ouvert",
+    activite: "Comptage et débitmétrie",
+    jour: 6,
+    estime: 3800000,
+    statut: "En préparation",
+    qui: "imane",
+    notes: "Visite des lieux obligatoire faite. Reste : bordereau des prix et attestation de référence ONEE.",
+  },
+  {
+    reference: "AO 22/2026/SRM-RSK",
+    maitreOuvrage: "SRM Rabat-Salé-Kénitra",
+    objet: "Télégestion des forages et réservoirs de la province de Kénitra",
+    procedure: "AO ouvert",
+    activite: "Télégestion / SCADA",
+    jour: 18,
+    estime: 5500000,
+    statut: "En préparation",
+    qui: "omar",
+    notes: "Lot unique. Interopérabilité exigée avec le SCADA existant de la SRM.",
+  },
+  {
+    reference: "Consultation 03/2026/RADEEJ",
+    maitreOuvrage: "RADEEJ (Régie d'El Jadida)",
+    objet: "Campagne de recherche de fuites et sectorisation du centre-ville",
+    procedure: "Consultation",
+    activite: "Détection de fuites",
+    jour: 30,
+    estime: 1200000,
+    statut: "Veille",
+    qui: "khalid",
+    notes: "Avis publié sur le portail des marchés publics. Décision go / no go à prendre.",
+  },
+  {
+    reference: "AO 15/2026/SRM-SM",
+    maitreOuvrage: "SRM Souss-Massa",
+    objet: "Mesure en continu des paramètres physico-chimiques des stations de reprise",
+    procedure: "AO ouvert",
+    activite: "Mesures physico-chimiques",
+    jour: -10,
+    estime: 3100000,
+    soumis: 2950000,
+    caution: 60000,
+    statut: "Déposé",
+    qui: "imane",
+    notes: "Ouverture des plis effectuée, 4 soumissionnaires. Résultats attendus sous 3 semaines.",
+  },
+  {
+    reference: "AO 09/2026/RADEES",
+    maitreOuvrage: "RADEES (Régie de Safi)",
+    objet: "Automatisation des stations de pompage",
+    procedure: "AO ouvert",
+    activite: "Automatisme",
+    jour: -45,
+    estime: 2300000,
+    soumis: 2180000,
+    caution: 40000,
+    statut: "Perdu",
+    qui: "nadia",
+    notes: "Attribué au moins-disant (-11 % sur notre offre). Caution provisoire restituée.",
+  },
+  {
+    reference: "18/2026/SRM-MS",
+    maitreOuvrage: "SRM Marrakech-Safi",
+    objet: "Télégestion de 42 réservoirs et stations de pompage",
+    procedure: "AO ouvert",
+    activite: "Télégestion / SCADA",
+    jour: -95,
+    estime: 5600000,
+    soumis: 5200000,
+    caution: 100000,
+    statut: "Gagné",
+    qui: "hicham",
+    notes: "Marché notifié.",
+    projet: "PRJ-001",
+  },
+  {
+    reference: "52/2026/ONEE-BE",
+    maitreOuvrage: "ONEE – Branche Eau",
+    objet: "Analyseurs en ligne de la qualité de l'eau (chlore, pH, turbidité)",
+    procedure: "AO ouvert",
+    activite: "Mesures physico-chimiques",
+    jour: -110,
+    estime: 2900000,
+    soumis: 2600000,
+    caution: 50000,
+    statut: "Gagné",
+    qui: "imane",
+    notes: "Marché notifié.",
+    projet: "PRJ-003",
   },
 ];
 
 async function main() {
   // `--si-vide` (utilisé au déploiement Vercel) : ne touche à rien si la base contient déjà
   // des projets, pour ne jamais écraser les données saisies.
-  if (process.argv.includes("--si-vide") && (await prisma.projet.count()) > 0) {
+  // Exception : la toute première démo (générique, avant l'adaptation eau / télégestion) est
+  // remplacée, reconnue à son projet « Refonte du portail client ».
+  const ancienneDemo = await prisma.projet.count({ where: { nom: "Refonte du portail client" } });
+  if (process.argv.includes("--si-vide") && (await prisma.projet.count()) > 0 && ancienneDemo === 0) {
     console.log("Base déjà alimentée : données de démonstration non rechargées.");
     return;
   }
+  await prisma.appelOffre.deleteMany();
   await prisma.temps.deleteMany();
   await prisma.depense.deleteMany();
   await prisma.risque.deleteMany();
@@ -344,13 +486,14 @@ async function main() {
         nom: m.nom,
         role: m.role,
         tauxJournalier: m.taux,
-        email: `${m.cle}@exemple.fr`,
-        capaciteJours: m.cle === "claire" ? 3 : 5,
+        email: `${m.cle}@exemple.ma`,
+        capaciteJours: m.cle === "youssef" ? 3 : 5,
       },
     });
     membres[m.cle] = { id: cree.id, taux: m.taux };
   }
 
+  const projets: Record<string, string> = {};
   for (const p of PROJETS) {
     const debut = j(p.debut);
     const fin = j(p.fin);
@@ -360,6 +503,7 @@ async function main() {
         code: p.code,
         nom: p.nom,
         client: p.client,
+        numeroMarche: p.numeroMarche,
         description: p.description,
         chefId: membres[p.chef].id,
         statut: p.statut,
@@ -371,6 +515,7 @@ async function main() {
         commentaire: p.commentaire,
       },
     });
+    projets[p.code] = projet.id;
 
     let ordre = 0;
     for (const [indexPhase, ph] of p.phases.entries()) {
@@ -449,9 +594,29 @@ async function main() {
     }
   }
 
+  for (const a of APPELS_OFFRES) {
+    await prisma.appelOffre.create({
+      data: {
+        reference: a.reference,
+        maitreOuvrage: a.maitreOuvrage,
+        objet: a.objet,
+        procedure: a.procedure,
+        activite: a.activite,
+        dateLimite: j(a.jour),
+        montantEstime: a.estime,
+        montantSoumis: a.soumis ?? null,
+        cautionProvisoire: a.caution ?? null,
+        statut: a.statut,
+        responsableId: membres[a.qui].id,
+        notes: a.notes,
+        projetId: a.projet ? projets[a.projet] : null,
+      },
+    });
+  }
+
   const n = await prisma.tache.count();
   const t = await prisma.temps.count();
-  console.log(`Démo prête : ${MEMBRES.length} membres, ${PROJETS.length} projets, ${n} tâches, ${t} saisies de temps.`);
+  console.log(`Démo prête : ${MEMBRES.length} membres, ${PROJETS.length} projets, ${APPELS_OFFRES.length} appels d'offres, ${n} tâches, ${t} saisies de temps.`);
 }
 
 main()

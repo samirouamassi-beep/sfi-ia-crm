@@ -24,6 +24,7 @@ model Membre {
   actif          Boolean @default(true)
 
   projetsDiriges Projet[]
+  appelsOffres   AppelOffre[]
   taches         Tache[]
   temps          Temps[]
   risques        Risque[]
@@ -34,6 +35,7 @@ model Projet {
   code         String    @unique
   nom          String
   client       String?
+  numeroMarche String?
   description  String?
   chefId       String?
   chef         Membre?   @relation(fields: [chefId], references: [id], onDelete: SetNull)
@@ -52,6 +54,8 @@ model Projet {
   depenses Depense[]
   risques  Risque[]
   temps    Temps[]
+
+  appelOffre AppelOffre?
 }
 
 model Phase {
@@ -128,4 +132,26 @@ model Risque {
   mitigation    String?
   echeance      DateTime?
   createdAt     DateTime  @default(now())
+}
+
+// Appels d'offres suivis avant de devenir des projets (marchés gagnés).
+model AppelOffre {
+  id                String    @id @default(cuid())
+  reference         String
+  maitreOuvrage     String
+  objet             String
+  procedure         String // AO ouvert, AO restreint, Consultation, Bon de commande
+  activite          String
+  dateLimite        DateTime
+  montantEstime     Float?
+  montantSoumis     Float?
+  cautionProvisoire Float?
+  statut            String
+  responsableId     String?
+  responsable       Membre?   @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  notes             String?
+  projetId          String?   @unique
+  projet            Projet?   @relation(fields: [projetId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }

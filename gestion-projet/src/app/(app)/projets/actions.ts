@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { date, nombre, texte } from "@/lib/formulaire";
 import { cheminRetour } from "@/lib/retour";
+import { PHASES_DEFAUT } from "@/lib/listes";
 
 function revalider(projetId?: string) {
   revalidatePath("/", "layout");
@@ -20,6 +21,7 @@ function donneesProjet(formData: FormData) {
     code: texte(formData, "code") ?? "",
     nom: texte(formData, "nom") ?? "",
     client: texte(formData, "client"),
+    numeroMarche: texte(formData, "numeroMarche"),
     description: texte(formData, "description"),
     chefId: texte(formData, "chefId"),
     statut: texte(formData, "statut") ?? "Cadrage",
@@ -35,9 +37,8 @@ function donneesProjet(formData: FormData) {
 export async function creerProjet(formData: FormData) {
   const projet = await prisma.projet.create({ data: donneesProjet(formData) });
   // Phases de départ, modifiables ensuite.
-  const phases = ["Cadrage", "Réalisation", "Recette et déploiement"];
   await prisma.phase.createMany({
-    data: phases.map((nom, ordre) => ({ projetId: projet.id, nom, ordre })),
+    data: PHASES_DEFAUT.map((nom, ordre) => ({ projetId: projet.id, nom, ordre })),
   });
   revalider();
   redirect(`/projets/${projet.id}`);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MARQUE } from "@/lib/marque";
 
 export function Carte({
   titre,
@@ -200,13 +201,10 @@ export function EnTete({
   );
 }
 
-export function formatEuros(valeur: number | null | undefined): string {
+export function formatMontant(valeur: number | null | undefined): string {
   if (valeur == null) return "–";
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(valeur);
+  const nombre = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(valeur);
+  return `${nombre} ${MARQUE.devise}`;
 }
 
 export function formatPourcentage(valeur: number | null | undefined): string {

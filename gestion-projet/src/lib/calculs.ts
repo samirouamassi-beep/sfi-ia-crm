@@ -101,6 +101,7 @@ export type Budget = {
   budget: number;
   coutTemps: number;
   coutDepenses: number;
+  achatsPrevus: number;
   consomme: number;
   resteAFaire: number;
   previsionFinale: number;
@@ -110,31 +111,37 @@ export type Budget = {
 
 /**
  * Budget d'un projet :
- * - consommé = temps saisis × taux journalier du membre + dépenses ;
+ * - consommé = temps saisis × taux journalier du membre + dépenses déjà réalisées ;
  * - reste à faire = charge restante des tâches × taux journalier du responsable
- *   (taux moyen de l'équipe si la tâche n'est pas affectée) ;
+ *   (taux moyen de l'équipe si la tâche n'est pas affectée) + achats prévus
+ *   (dépenses datées dans le futur) ;
  * - prévision finale = consommé + reste à faire.
  */
 export function calculerBudget(params: {
   budget: number;
   temps: { jours: number; membre: { tauxJournalier: number } }[];
-  depenses: { montant: number }[];
+  depenses: { montant: number; date: Date }[];
   taches: (TacheCalc & { responsable: { tauxJournalier: number } | null })[];
   tauxMoyen: number;
+  aujourdhui?: Date;
 }): Budget {
+  const auj = debutJour(params.aujourdhui ?? new Date());
   const coutTemps = params.temps.reduce((s, t) => s + t.jours * t.membre.tauxJournalier, 0);
-  const coutDepenses = params.depenses.reduce((s, d) => s + d.montant, 0);
+  const coutDepenses = params.depenses.filter((d) => d.date <= auj).reduce((s, d) => s + d.montant, 0);
+  const achatsPrevus = params.depenses.filter((d) => d.date > auj).reduce((s, d) => s + d.montant, 0);
   const consomme = coutTemps + coutDepenses;
-  const resteAFaire = params.taches.reduce((s, t) => {
+  const resteTravail = params.taches.reduce((s, t) => {
     if (t.jalon || tacheTerminee(t)) return s;
     const taux = t.responsable?.tauxJournalier ?? params.tauxMoyen;
     return s + t.chargeJours * (1 - t.avancement / 100) * taux;
   }, 0);
+  const resteAFaire = resteTravail + achatsPrevus;
   const previsionFinale = consomme + resteAFaire;
   return {
     budget: params.budget,
     coutTemps,
     coutDepenses,
+    achatsPrevus,
     consomme,
     resteAFaire,
     previsionFinale,
