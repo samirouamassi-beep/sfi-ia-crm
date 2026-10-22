@@ -136,7 +136,7 @@ export function ProjetForm({
           <Choix nom="meteo" valeurs={METEOS} defaut={valeurs.meteo} />
         </div>
         <div>
-          <label className={labelClass}>Budget (DH HT)</label>
+          <label className={labelClass}>Budget (MAD HT)</label>
           <input type="number" min="0" step="100" name="budget" defaultValue={valeurs.budget ?? 0} className={inputClass} />
         </div>
         <div className="sm:col-span-2">
@@ -333,7 +333,7 @@ export function DepenseForm({ action }: { action: (formData: FormData) => void }
         <Choix nom="categorie" valeurs={CATEGORIES_DEPENSE} />
       </div>
       <div>
-        <label className={labelClass}>Montant (DH)</label>
+        <label className={labelClass}>Montant (MAD)</label>
         <input type="number" min="0" step="1" name="montant" required className={inputClass} />
       </div>
       <div>

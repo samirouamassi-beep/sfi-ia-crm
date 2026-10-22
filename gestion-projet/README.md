@@ -74,7 +74,7 @@ librairie de graphique : Gantt, Kanban, matrice et plan de charge sont en HTML/C
 - `src/lib/calculs.ts` — toutes les règles métier (fonctions pures).
 - `src/lib/listes.ts` — statuts, priorités, rôles, catégories : à adapter au vocabulaire du
   client sans migration.
-- `src/lib/marque.ts` — nom, accroche et devise (DH) du produit.
+- `src/lib/marque.ts` — nom, accroche et devise (MAD) du produit.
 - `src/components/gantt.tsx`, `kanban.tsx`, `risques.tsx` — composants de visualisation.
 - `src/app/(app)/*` — une route par module.
 

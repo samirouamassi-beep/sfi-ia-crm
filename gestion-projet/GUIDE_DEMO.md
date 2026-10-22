@@ -20,7 +20,7 @@ vos marchés, vos équipes terrain et votre marge. »**
 
 ### 1. Tableau de bord (3 min) — la vision direction
 
-- 4 marchés en cours pour 15,3 M DH : un rouge, un orange, deux verts.
+- 4 marchés en cours pour 15,3 M MAD : un rouge, un orange, deux verts.
 - Pour chaque marché : avancement réel vs prévu (trait vertical), consommé vs montant du
   marché, prochain jalon (réception provisoire…), alertes.
 - **Appels d'offres à déposer** : l'AO débitmètres de l'ONEE est à J-6.

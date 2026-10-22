@@ -2,5 +2,5 @@
 export const MARQUE = {
   nom: process.env.NEXT_PUBLIC_APP_NAME ?? "Pilotis",
   accroche: "Pilotage des projets de télégestion et d'automatisme",
-  devise: "DH",
+  devise: "MAD",
 };

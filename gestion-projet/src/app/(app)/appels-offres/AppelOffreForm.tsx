@@ -70,15 +70,15 @@ export function AppelOffreForm({
           <input type="date" name="dateLimite" required defaultValue={dateInput(valeurs.dateLimite)} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>Estimation MO (DH)</label>
+          <label className={labelClass}>Estimation MO (MAD)</label>
           <input type="number" min="0" step="1000" name="montantEstime" defaultValue={valeurs.montantEstime ?? ""} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>Montant soumis (DH)</label>
+          <label className={labelClass}>Montant soumis (MAD)</label>
           <input type="number" min="0" step="1000" name="montantSoumis" defaultValue={valeurs.montantSoumis ?? ""} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>Caution provisoire (DH)</label>
+          <label className={labelClass}>Caution provisoire (MAD)</label>
           <input type="number" min="0" step="1000" name="cautionProvisoire" defaultValue={valeurs.cautionProvisoire ?? ""} className={inputClass} />
         </div>
         <div>
