@@ -27,6 +27,7 @@ const LARGEUR_SEMAINE = 42;
 const PX_JOUR = LARGEUR_SEMAINE / 7;
 const HAUTEUR_LIGNE = 36;
 const HAUTEUR_ENTETE = 48;
+const LARGEUR_LIBELLES = 256; // colonne des libellés (w-64)
 const JOUR_MS = 24 * 60 * 60 * 1000;
 
 const formatDate = (d: Date) => new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(d);
@@ -61,6 +62,19 @@ export function Gantt({
   const [message, setMessage] = useState<string | null>(null);
   const [enCours, demarrer] = useTransition();
   const glisse = useRef<Glisse | null>(null);
+  const defilement = useRef<HTMLDivElement>(null);
+
+  // À l'ouverture, se placer sur la période en cours : aujourd'hui au premier tiers de la
+  // zone visible (la colonne des libellés, collante, en occupe le début).
+  useEffect(() => {
+    const el = defilement.current;
+    if (!el) return;
+    const ligne = el.querySelector<HTMLElement>("[data-aujourdhui]");
+    if (!ligne) return;
+    const x = ligne.getBoundingClientRect().left - el.getBoundingClientRect().left + el.scrollLeft;
+    const visible = el.clientWidth - LARGEUR_LIBELLES;
+    el.scrollLeft = Math.max(0, x - LARGEUR_LIBELLES - visible * 0.3);
+  }, []);
 
   useEffect(() => {
     if (!message) return;
@@ -166,14 +180,17 @@ export function Gantt({
   return (
     <div className="relative">
       {message && (
-        <div className="absolute right-2 top-2 z-30 rounded-md bg-slate-900 px-3 py-2 text-sm text-white shadow-lg">
+        <div className="absolute right-2 top-2 z-40 rounded-md bg-slate-900 px-3 py-2 text-sm text-white shadow-lg">
           {message}
         </div>
       )}
-      <div className={`overflow-x-auto rounded-lg border border-slate-200 ${enCours ? "opacity-70" : ""}`}>
+      <div
+        ref={defilement}
+        className={`overflow-x-auto rounded-lg border border-slate-200 ${enCours ? "opacity-70" : ""}`}
+      >
         <div className="flex min-w-max">
           {/* Colonne des libellés */}
-          <div className="sticky left-0 z-20 w-64 shrink-0 border-r border-slate-200 bg-white">
+          <div className="sticky left-0 z-30 w-64 shrink-0 border-r border-slate-200 bg-white">
             <div
               className="flex items-end border-b border-slate-200 px-3 pb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
               style={{ height: HAUTEUR_ENTETE }}
@@ -244,6 +261,7 @@ export function Gantt({
                 <div key={s.getTime()} className="absolute top-0 bottom-0 border-l border-slate-100" style={{ left: px(s) }} />
               ))}
               <div
+                data-aujourdhui
                 className="absolute top-0 bottom-0 z-10 w-0.5 bg-rose-500/70"
                 style={{ left: px(aujourdhui) + PX_JOUR / 2 }}
                 title="Aujourd'hui"
