@@ -7,6 +7,8 @@ pensée pour être complétée selon le besoin du client.
 
 Le nom « Pilotis » est provisoire : il se change via `NEXT_PUBLIC_APP_NAME` (marque blanche).
 
+Captures d'écran : [`docs/captures/`](./docs/captures/).
+
 ## Fonctionnalités
 
 | Module | Ce qu'il fait |
