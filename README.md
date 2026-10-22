@@ -63,3 +63,9 @@ DATABASE_URL="<chaîne Neon>" npx prisma migrate deploy
 ## Déploiement
 
 Voir [`DEPLOIEMENT.md`](./DEPLOIEMENT.md) pour la mise en ligne sur Neon + Vercel.
+
+## Autre application du dépôt : gestion de projet
+
+Le dossier [`gestion-projet/`](./gestion-projet/README.md) contient une application autonome de
+gestion de projets et de portefeuille (V0 de démonstration client, type Genius Project), avec
+son propre `package.json`, sa base et son déploiement Vercel (Root Directory `gestion-projet`).
