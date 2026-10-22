@@ -16,23 +16,57 @@ export const PRIORITES = ["Basse", "Normale", "Haute", "Critique"] as const;
 export const METEOS = ["Vert", "Orange", "Rouge"] as const;
 
 export const ROLES = [
+  "Directeur technique",
   "Chef de projet",
-  "Directeur de programme",
-  "Consultant",
-  "Développeur",
-  "Designer",
-  "Architecte",
-  "Testeur",
-  "PMO",
+  "Chargé d'affaires",
+  "Ingénieur automaticien",
+  "Ingénieur SCADA / télégestion",
+  "Technicien instrumentation",
+  "Technicien détection de fuites",
+  "Technicien de chantier",
+  "Chargé d'études / AO",
 ] as const;
 
 export const CATEGORIES_DEPENSE = [
-  "Sous-traitance",
-  "Licences",
-  "Matériel",
-  "Déplacements",
-  "Formation",
+  "Instrumentation et capteurs",
+  "Automates et RTU",
+  "Télécom (GSM/radio/fibre)",
+  "Génie civil et sous-traitance",
+  "Licences SCADA",
+  "Transport et déplacements",
+  "Cautions et frais de marché",
   "Autre",
+] as const;
+
+// Activités du client (servent à classer projets et appels d'offres).
+export const ACTIVITES = [
+  "Télégestion / SCADA",
+  "Automatisme",
+  "Mesures physico-chimiques",
+  "Détection de fuites",
+  "Comptage et débitmétrie",
+  "Maintenance",
+] as const;
+
+// Phases créées par défaut pour un nouveau projet (cycle type d'un marché).
+export const PHASES_DEFAUT = [
+  "Études et validation",
+  "Approvisionnement",
+  "Installation sur sites",
+  "Programmation et intégration",
+  "Essais et mise en service",
+  "Réception",
+] as const;
+
+export const PROCEDURES_AO = ["AO ouvert", "AO restreint", "Consultation", "Bon de commande"] as const;
+
+export const STATUTS_AO = [
+  "Veille",
+  "En préparation",
+  "Déposé",
+  "Gagné",
+  "Perdu",
+  "Abandonné",
 ] as const;
 
 export const TYPES_RISQUE = ["Risque", "Problème"] as const;

@@ -36,7 +36,7 @@ export function MembreForm({
           </select>
         </div>
         <div>
-          <label className={labelClass}>Taux journalier (€)</label>
+          <label className={labelClass}>Coût journalier (MAD)</label>
           <input type="number" min="0" step="10" name="tauxJournalier" defaultValue={valeurs.tauxJournalier ?? 0} className={inputClass} />
         </div>
         <div>

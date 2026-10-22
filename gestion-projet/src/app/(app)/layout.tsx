@@ -5,6 +5,7 @@ import { MARQUE } from "@/lib/marque";
 
 const LIENS: LienNav[] = [
   { href: "/", label: "Tableau de bord", icone: "accueil" },
+  { href: "/appels-offres", label: "Appels d'offres", icone: "ao" },
   { href: "/projets", label: "Projets", icone: "projets" },
   { href: "/planning", label: "Planning", icone: "planning" },
   { href: "/mes-taches", label: "Tâches", icone: "taches" },

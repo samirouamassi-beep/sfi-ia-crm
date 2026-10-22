@@ -1,8 +1,12 @@
 # Pilotis — gestion de projets et de portefeuille (V0)
 
 Application web de pilotage de projets dans l'esprit de Genius Project / MS Project Online :
-portefeuille, planning Gantt, Kanban, plan de charge des ressources, feuilles de temps, suivi
-budgétaire et registre des risques. Cette V0 sert de démonstrateur commercial ; elle est
+appels d'offres, portefeuille de marchés, planning Gantt, Kanban, plan de charge des
+ressources, feuilles de temps, suivi budgétaire et registre des risques.
+
+La démo est adaptée à un intégrateur **télégestion / automatisme / mesures physico-chimiques
+/ détection de fuites** qui répond aux appels d'offres de l'ONEE, des SRM et des régies
+(montants en dirhams, données fictives). Cette V0 sert de démonstrateur commercial ; elle est
 pensée pour être complétée selon le besoin du client.
 
 Le nom « Pilotis » est provisoire : il se change via `NEXT_PUBLIC_APP_NAME` (marque blanche).
@@ -14,6 +18,7 @@ Captures d'écran : [`docs/captures/`](./docs/captures/).
 | Module | Ce qu'il fait |
 | --- | --- |
 | **Tableau de bord** (`/`) | KPI du portefeuille (budget engagé, consommé, prévision à terminaison, retards), tableau des projets avec météo, avancement réel vs prévu, consommation budgétaire, prochain jalon, alertes ; jalons à 30 jours ; top 5 des risques. |
+| **Appels d'offres** (`/appels-offres`) | Veille et suivi des AO (référence, maître d'ouvrage, procédure, activité, date limite, estimation, montant soumis, caution provisoire, statut). KPI : offres en cours, prochain dépôt, taux de réussite, cautions immobilisées. Un AO gagné se convertit en projet en un clic. |
 | **Projets** (`/projets`) | Liste filtrable par statut + recherche. Fiche projet à onglets : **Synthèse** (météo et commentaire de situation, avancement par phase, jalons, équipe), **Tâches** (WBS par phase), **Gantt**, **Kanban** (glisser-déposer), **Budget** (temps passés × taux journalier + dépenses + reste à faire), **Risques** (matrice probabilité × impact + registre). |
 | **Planning** (`/planning`) | Gantt multi-projets : barres projet + jalons ou phases. |
 | **Tâches** (`/mes-taches`) | Toutes les tâches ouvertes, filtrables par collaborateur, groupées par échéance (retard, 7 jours, 30 jours, plus tard). |
@@ -29,9 +34,10 @@ Captures d'écran : [`docs/captures/`](./docs/captures/).
 - **Avancement prévu à date** = part de la charge qui devrait être réalisée aujourd'hui selon
   le planning (répartition linéaire sur la durée de chaque tâche). Affiché comme un trait
   vertical sur les barres de progression.
-- **Consommé** = jours saisis × taux journalier du collaborateur + dépenses.
-- **Reste à faire** = charge restante des tâches non terminées × taux du responsable (taux
-  moyen de l'équipe si non affectée).
+- **Consommé** = jours saisis × coût journalier du collaborateur + dépenses déjà réalisées.
+- **Reste à faire** = charge restante des tâches non terminées × coût du responsable (coût
+  moyen de l'équipe si non affectée) + achats prévus (dépenses datées dans le futur).
+- **Budget** d'un projet = montant du marché HT : l'écart avec la prévision est la marge.
 - **Prévision à terminaison** = consommé + reste à faire ; écart = budget − prévision.
 - **Retard** : tâche non terminée dont la date de fin est passée.
 - **Plan de charge** : la charge d'une tâche est répartie uniformément sur ses jours ouvrés.
@@ -62,17 +68,29 @@ librairie de graphique : Gantt, Kanban, matrice et plan de charge sont en HTML/C
 
 ## Structure
 
-- `prisma/schema.prisma` — Membre, Projet, Phase, Tache, Temps, Depense, Risque.
-- `prisma/seed.ts` — jeu de démonstration (9 collaborateurs, 5 projets dont un vert, un
-  orange, un rouge, un en cadrage et un terminé).
+- `prisma/schema.prisma` — Membre, AppelOffre, Projet, Phase, Tache, Temps, Depense, Risque.
+- `prisma/seed.ts` — jeu de démonstration fictif (9 collaborateurs, 7 appels d'offres,
+  5 marchés ONEE / SRM / régies : un vert, un orange, un rouge, un en cadrage, un terminé).
 - `src/lib/calculs.ts` — toutes les règles métier (fonctions pures).
 - `src/lib/listes.ts` — statuts, priorités, rôles, catégories : à adapter au vocabulaire du
   client sans migration.
-- `src/lib/marque.ts` — nom et accroche du produit.
+- `src/lib/marque.ts` — nom, accroche et devise (MAD) du produit.
 - `src/components/gantt.tsx`, `kanban.tsx`, `risques.tsx` — composants de visualisation.
 - `src/app/(app)/*` — une route par module.
 
 ## Pistes pour la V1 (selon le besoin du client)
+
+Spécifiques au métier (eau, télégestion, marchés publics) :
+
+- Gestion des sites (réservoirs, stations, forages) et des équipements installés : n° de
+  série, photos, PV de mise en service, géolocalisation sur carte.
+- Marchés publics : bordereau des prix, décomptes et attachements, révision des prix,
+  retenue de garantie, pénalités de retard, réceptions provisoire / définitive, cautions.
+- Dossier d'AO : pièces administratives et techniques, bibliothèque de références et de prix.
+- Maintenance après réception : contrats, interventions préventives / curatives, astreintes.
+- Application mobile terrain (hors-ligne) pour les techniciens.
+
+Générales :
 
 - Comptes utilisateurs individuels et rôles (admin, chef de projet, contributeur, lecteur),
   SSO Microsoft / Google.

@@ -25,7 +25,7 @@ import {
   boutonSecondaire,
   formatDate,
   formatDateCourte,
-  formatEuros,
+  formatMontant,
   formatJours,
   formatPourcentage,
   inputClass,
@@ -113,9 +113,11 @@ export default async function ProjetPage({
             <Meteo valeur={projet.meteo} avecLibelle />
           </span>
         }
-        sousTitre={`${projet.client ?? "Sans client"} · Chef de projet : ${
-          projet.chef?.nom ?? "non défini"
-        } · du ${formatDate(projet.debut)} au ${formatDate(projet.fin)}`}
+        sousTitre={`${projet.client ?? "Sans maître d'ouvrage"}${
+          projet.numeroMarche ? ` · Marché n° ${projet.numeroMarche}` : ""
+        } · Chef de projet : ${projet.chef?.nom ?? "non défini"} · du ${formatDate(
+          projet.debut
+        )} au ${formatDate(projet.fin)}`}
         actions={
           <>
             <Link href={`/projets/${id}/taches/nouvelle`} className={boutonPrincipal}>
@@ -137,13 +139,13 @@ export default async function ProjetPage({
         />
         <Kpi
           label="Budget consommé"
-          valeur={formatEuros(budget.consomme)}
-          detail={`${formatPourcentage(budget.tauxConsommation)} de ${formatEuros(budget.budget)}`}
+          valeur={formatMontant(budget.consomme)}
+          detail={`${formatPourcentage(budget.tauxConsommation)} de ${formatMontant(budget.budget)}`}
         />
         <Kpi
           label="Prévision à terminaison"
-          valeur={formatEuros(budget.previsionFinale)}
-          detail={budget.ecart < 0 ? `Dépassement ${formatEuros(-budget.ecart)}` : `Marge ${formatEuros(budget.ecart)}`}
+          valeur={formatMontant(budget.previsionFinale)}
+          detail={budget.ecart < 0 ? `Dépassement ${formatMontant(-budget.ecart)}` : `Marge ${formatMontant(budget.ecart)}`}
           ton={budget.ecart < 0 ? "danger" : "bon"}
         />
         <Kpi
@@ -445,8 +447,8 @@ function OngletBudget({
         <div className="space-y-4">
           <div>
             <div className="mb-1 flex justify-between text-sm">
-              <span>Budget alloué</span>
-              <span className="font-medium">{formatEuros(budget.budget)}</span>
+              <span>Montant du marché (budget)</span>
+              <span className="font-medium">{formatMontant(budget.budget)}</span>
             </div>
             <div className="h-4 rounded bg-slate-100">
               <div className="h-full rounded bg-slate-400" style={{ width: pct(budget.budget) }} />
@@ -456,12 +458,12 @@ function OngletBudget({
             <div className="mb-1 flex justify-between text-sm">
               <span>Prévision à terminaison</span>
               <span className={`font-medium ${budget.ecart < 0 ? "text-red-600" : "text-emerald-600"}`}>
-                {formatEuros(budget.previsionFinale)}
+                {formatMontant(budget.previsionFinale)}
               </span>
             </div>
             <div className="flex h-4 overflow-hidden rounded bg-slate-100">
               <div className="h-full bg-indigo-600" style={{ width: pct(budget.coutTemps) }} title="Temps passés" />
-              <div className="h-full bg-sky-400" style={{ width: pct(budget.coutDepenses) }} title="Dépenses" />
+              <div className="h-full bg-sky-400" style={{ width: pct(budget.coutDepenses) }} title="Dépenses réalisées" />
               <div
                 className="h-full bg-indigo-200 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,.6)_4px,rgba(255,255,255,.6)_8px)]"
                 style={{ width: pct(budget.resteAFaire) }}
@@ -469,14 +471,14 @@ function OngletBudget({
               />
             </div>
             <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-600">
-              <span>■ <span className="text-indigo-600">Temps passés</span> {formatEuros(budget.coutTemps)}</span>
-              <span>■ <span className="text-sky-500">Dépenses</span> {formatEuros(budget.coutDepenses)}</span>
-              <span>■ <span className="text-indigo-300">Reste à faire</span> {formatEuros(budget.resteAFaire)}</span>
+              <span>■ <span className="text-indigo-600">Temps passés</span> {formatMontant(budget.coutTemps)}</span>
+              <span>■ <span className="text-sky-500">Dépenses réalisées</span> {formatMontant(budget.coutDepenses)}</span>
+              <span>■ <span className="text-indigo-300">Reste à faire</span> {formatMontant(budget.resteAFaire)}</span>
             </div>
           </div>
           <p className="text-xs text-slate-500">
             Temps passés = jours saisis × taux journalier · Reste à faire = charge restante des tâches ×
-            taux du responsable.
+            taux du responsable + achats prévus (dépenses datées dans le futur).
           </p>
         </div>
       </Carte>
@@ -499,7 +501,7 @@ function OngletBudget({
                   <tr key={m.nom}>
                     <td className={tdClass}>{m.nom}</td>
                     <td className={`${tdClass} text-right tabular-nums`}>{formatJours(m.jours)}</td>
-                    <td className={`${tdClass} text-right tabular-nums`}>{formatEuros(m.jours * m.taux)}</td>
+                    <td className={`${tdClass} text-right tabular-nums`}>{formatMontant(m.jours * m.taux)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -518,10 +520,11 @@ function OngletBudget({
                     <div className="truncate">{d.libelle}</div>
                     <div className="text-xs text-slate-500">
                       {d.categorie} · {formatDate(d.date)}
+                      {d.date > new Date() && <span className="ml-1 font-medium text-indigo-600">(achat prévu)</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="tabular-nums">{formatEuros(d.montant)}</span>
+                    <span className="whitespace-nowrap tabular-nums">{formatMontant(d.montant)}</span>
                     <form action={supprimerDepense.bind(null, projet.id, d.id)}>
                       <button className="text-xs text-slate-400 hover:text-red-600" title="Supprimer">
                         ✕
