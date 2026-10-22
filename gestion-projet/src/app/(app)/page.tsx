@@ -163,7 +163,7 @@ export default async function TableauDeBord() {
                         <Badge ton="Ouvert">{p.tachesEnRetard} en retard</Badge>
                       )}
                       {p.risquesCritiques > 0 && (
-                        <Badge ton="Haute">{p.risquesCritiques} risque critique</Badge>
+                        <Badge ton="Haute">{p.risquesCritiques} {p.risquesCritiques > 1 ? "risques critiques" : "risque critique"}</Badge>
                       )}
                       {p.tachesEnRetard === 0 && p.risquesCritiques === 0 && (
                         <span className="text-xs text-slate-400">—</span>
