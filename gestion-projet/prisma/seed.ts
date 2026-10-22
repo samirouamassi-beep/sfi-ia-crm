@@ -323,6 +323,12 @@ const PROJETS: ProjetModele[] = [
 ];
 
 async function main() {
+  // `--si-vide` (utilisé au déploiement Vercel) : ne touche à rien si la base contient déjà
+  // des projets, pour ne jamais écraser les données saisies.
+  if (process.argv.includes("--si-vide") && (await prisma.projet.count()) > 0) {
+    console.log("Base déjà alimentée : données de démonstration non rechargées.");
+    return;
+  }
   await prisma.temps.deleteMany();
   await prisma.depense.deleteMany();
   await prisma.risque.deleteMany();

@@ -7,15 +7,15 @@ Même procédure que le CRM, avec une base et un projet Vercel séparés.
 1. Sur https://neon.tech, crée un nouveau projet (ex. `pilotis-demo`).
 2. Copie la chaîne de connexion `postgresql://...?sslmode=require`.
 
-## 2. Initialiser la base
+## 2. Initialisation de la base : automatique
 
-Depuis ta machine, dans le dossier `gestion-projet` :
+Rien à lancer à la main. Au déploiement, Vercel exécute le script `vercel-build` :
+`prisma migrate deploy` (crée / met à jour les tables) puis `prisma/seed.ts --si-vide`
+(charge les données de démonstration **uniquement si la base ne contient aucun projet**),
+puis `next build`.
 
-```bash
-npm install
-DATABASE_URL="<chaîne Neon>" npx prisma migrate deploy
-DATABASE_URL="<chaîne Neon>" npm run seed
-```
+Pour `DATABASE_URL`, utiliser la chaîne Neon **sans `-pooler`** dans le nom d'hôte
+(connexion directe) : les migrations Prisma ne passent pas de façon fiable par le pooler.
 
 ## 3. Projet Vercel
 
@@ -30,8 +30,8 @@ DATABASE_URL="<chaîne Neon>" npm run seed
 
 ## 4. Avant chaque présentation
 
-Relancer le seed pour recaler les dates de démonstration sur le jour J (et effacer ce que le
-client aura saisi lors d'une précédente démo) :
+Relancer le seed complet pour recaler les dates de démonstration sur le jour J (et effacer ce
+que le client aura saisi lors d'une précédente démo), depuis un poste qui a accès à Neon :
 
 ```bash
 DATABASE_URL="<chaîne Neon>" npm run seed
