@@ -18,7 +18,7 @@ const LIENS: LienNav[] = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
-      <aside className="border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:shrink-0 lg:border-r lg:border-b-0">
+      <aside className="print:hidden border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:shrink-0 lg:border-r lg:border-b-0">
         <div className="flex h-full flex-col gap-4 p-3 lg:p-4">
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2">
@@ -49,7 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </form>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 px-4 py-6 lg:px-8">
+      <main className="min-w-0 flex-1 px-4 py-6 lg:px-8 print:p-0">
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>
     </div>

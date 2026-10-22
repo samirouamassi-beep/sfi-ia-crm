@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { date, nombre, texte } from "@/lib/formulaire";
 import { cheminRetour } from "@/lib/retour";
 import { PHASES_DEFAUT } from "@/lib/listes";
+import { definirPredecesseurs, propagerDependances } from "@/lib/planification";
 
 function revalider(projetId?: string) {
   revalidatePath("/", "layout");
@@ -30,6 +31,7 @@ function donneesProjet(formData: FormData) {
     debut,
     fin: fin < debut ? debut : fin,
     budget: nombre(formData, "budget"),
+    tauxTva: nombre(formData, "tauxTva", 20),
     commentaire: texte(formData, "commentaire"),
   };
 }
@@ -66,6 +68,18 @@ export async function mettreAJourMeteo(id: string, formData: FormData) {
     },
   });
   revalider(id);
+}
+
+/**
+ * Fige le planning actuel comme planning de référence (baseline) : dates et charge de chaque
+ * tâche. Les écarts sont ensuite mesurés par rapport à cette photo.
+ */
+export async function enregistrerReference(projetId: string) {
+  await prisma.$transaction([
+    prisma.$executeRaw`UPDATE "Tache" SET "baselineDebut" = "debut", "baselineFin" = "fin", "baselineCharge" = "chargeJours" WHERE "projetId" = ${projetId}`,
+    prisma.projet.update({ where: { id: projetId }, data: { baselineLe: new Date() } }),
+  ]);
+  revalider(projetId);
 }
 
 // ---------- Phases ----------
@@ -108,19 +122,55 @@ function donneesTache(formData: FormData) {
   };
 }
 
+function predecesseursSaisis(formData: FormData): string[] {
+  return formData.getAll("predecesseurs").filter((v): v is string => typeof v === "string" && v !== "");
+}
+
+/** Enregistre les prédécesseurs de la tâche puis repousse ce qui doit l'être. */
+async function appliquerDependances(projetId: string, tacheId: string, formData: FormData) {
+  const predecesseurs = predecesseursSaisis(formData);
+  await definirPredecesseurs(projetId, tacheId, predecesseurs);
+  await propagerDependances(projetId, [...predecesseurs, tacheId]);
+}
+
 export async function creerTache(projetId: string, formData: FormData) {
   const max = await prisma.tache.aggregate({ where: { projetId }, _max: { ordre: true } });
-  await prisma.tache.create({
+  const tache = await prisma.tache.create({
     data: { ...donneesTache(formData), projetId, ordre: (max._max.ordre ?? -1) + 1 },
   });
+  await appliquerDependances(projetId, tache.id, formData);
   revalider(projetId);
   redirect(cheminRetour(formData, `/projets/${projetId}?onglet=taches`));
 }
 
 export async function modifierTache(projetId: string, id: string, formData: FormData) {
   await prisma.tache.update({ where: { id }, data: donneesTache(formData) });
+  await appliquerDependances(projetId, id, formData);
   revalider(projetId);
   redirect(cheminRetour(formData, `/projets/${projetId}?onglet=taches`));
+}
+
+/**
+ * Glisser-déposer dans le Gantt : nouvelles dates d'une tâche (AAAA-MM-JJ), puis report
+ * sur ses successeurs. Renvoie le nombre de tâches repoussées par les dépendances.
+ */
+export async function deplacerTache(id: string, debutIso: string, finIso: string): Promise<number> {
+  const lire = (v: string) => {
+    const [a, m, j] = v.split("-").map(Number);
+    return new Date(a, m - 1, j);
+  };
+  const debut = lire(debutIso);
+  const finLue = lire(finIso);
+  if (Number.isNaN(debut.getTime()) || Number.isNaN(finLue.getTime())) return 0;
+  const tache = await prisma.tache.findUnique({ where: { id } });
+  if (!tache) return 0;
+  await prisma.tache.update({
+    where: { id },
+    data: { debut, fin: tache.jalon || finLue < debut ? debut : finLue },
+  });
+  const decalees = await propagerDependances(tache.projetId, [id]);
+  revalider(tache.projetId);
+  return decalees;
 }
 
 export async function supprimerTache(projetId: string, id: string) {

@@ -17,7 +17,13 @@ export default async function NouvelleTache({
   const { id } = await params;
   const { retour } = await searchParams;
   const [projet, membres] = await Promise.all([
-    prisma.projet.findUnique({ where: { id }, include: { phases: { orderBy: { ordre: "asc" } } } }),
+    prisma.projet.findUnique({
+      where: { id },
+      include: {
+        phases: { orderBy: { ordre: "asc" } },
+        taches: { include: { phase: true }, orderBy: { ordre: "asc" } },
+      },
+    }),
     prisma.membre.findMany({ where: { actif: true }, orderBy: { nom: "asc" } }),
   ]);
   if (!projet) notFound();
@@ -30,6 +36,7 @@ export default async function NouvelleTache({
           action={creerTache.bind(null, id)}
           membres={membres}
           phases={projet.phases}
+          autresTaches={projet.taches.map((t) => ({ id: t.id, nom: t.nom, phase: t.phase?.nom ?? null, jalon: t.jalon }))}
           valeurs={{ debut, fin: debut, phaseId: projet.phases[0]?.id }}
           annuler={cheminValide(retour) ? retour : `/projets/${id}?onglet=taches`}
           retour={cheminValide(retour) ? retour : undefined}

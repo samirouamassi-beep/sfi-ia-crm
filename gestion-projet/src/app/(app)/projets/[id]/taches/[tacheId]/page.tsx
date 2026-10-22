@@ -21,7 +21,13 @@ export default async function ModifierTache({
     prisma.tache.findUnique({
       where: { id: tacheId },
       include: {
-        projet: { include: { phases: { orderBy: { ordre: "asc" } } } },
+        projet: {
+          include: {
+            phases: { orderBy: { ordre: "asc" } },
+            taches: { include: { phase: true }, orderBy: { ordre: "asc" } },
+          },
+        },
+        predecesseurs: true,
         temps: { include: { membre: true }, orderBy: { date: "desc" } },
       },
     }),
@@ -37,7 +43,10 @@ export default async function ModifierTache({
         <Carte className="lg:col-span-2">
           <TacheForm
             action={modifierTache.bind(null, id, tacheId)}
-            valeurs={tache}
+            valeurs={{ ...tache, predecesseurs: tache.predecesseurs.map((d) => d.predecesseurId) }}
+            autresTaches={tache.projet.taches
+              .filter((t) => t.id !== tache.id)
+              .map((t) => ({ id: t.id, nom: t.nom, phase: t.phase?.nom ?? null, jalon: t.jalon }))}
             membres={membres}
             phases={tache.projet.phases}
             annuler={retourValide ?? `/projets/${id}?onglet=taches`}

@@ -44,7 +44,9 @@ model Projet {
   meteo        String // Vert / Orange / Rouge : santé déclarée par le chef de projet
   debut        DateTime
   fin          DateTime
-  budget       Float     @default(0)
+  budget       Float     @default(0) // montant du marché HT
+  tauxTva      Float     @default(20)
+  baselineLe   DateTime? // date d'enregistrement du planning de référence
   commentaire  String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -86,10 +88,27 @@ model Tache {
   chargeJours   Float     @default(0) // charge prévue
   avancement    Int       @default(0) // 0-100
   ordre         Int       @default(0)
+  // Planning de référence (baseline), figé par « Enregistrer le planning de référence ».
+  baselineDebut  DateTime?
+  baselineFin    DateTime?
+  baselineCharge Float?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  temps Temps[]
+  temps         Temps[]
+  predecesseurs Dependance[] @relation("successeur")
+  successeurs   Dependance[] @relation("predecesseur")
+}
+
+// Lien fin → début : le successeur ne peut commencer qu'après la fin du prédécesseur.
+model Dependance {
+  id             String @id @default(cuid())
+  predecesseurId String
+  predecesseur   Tache  @relation("predecesseur", fields: [predecesseurId], references: [id], onDelete: Cascade)
+  successeurId   String
+  successeur     Tache  @relation("successeur", fields: [successeurId], references: [id], onDelete: Cascade)
+
+  @@unique([predecesseurId, successeurId])
 }
 
 model Temps {
@@ -145,7 +164,7 @@ model AppelOffre {
   dateLimite        DateTime
   montantEstime     Float?
   montantSoumis     Float?
-  cautionProvisoire Float?
+  tauxTva           Float     @default(20)
   statut            String
   responsableId     String?
   responsable       Membre?   @relation(fields: [responsableId], references: [id], onDelete: SetNull)
@@ -154,4 +173,23 @@ model AppelOffre {
   projet            Projet?   @relation(fields: [projetId], references: [id], onDelete: SetNull)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  cautions Caution[]
+}
+
+// Cautions bancaires liées à un appel d'offres puis au marché (provisoire, définitive,
+// retenue de garantie) : montant immobilisé jusqu'à restitution / mainlevée.
+model Caution {
+  id            String     @id @default(cuid())
+  appelOffreId  String
+  appelOffre    AppelOffre @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+  type          String
+  montant       Float
+  banque        String?
+  reference     String?
+  dateEmission  DateTime?
+  dateEcheance  DateTime? // restitution ou mainlevée attendue
+  statut        String
+  notes         String?
+  createdAt     DateTime   @default(now())
 }

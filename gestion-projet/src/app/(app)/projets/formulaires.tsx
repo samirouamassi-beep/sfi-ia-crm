@@ -81,6 +81,7 @@ export type ValeursProjet = {
   debut?: Date;
   fin?: Date;
   budget?: number;
+  tauxTva?: number;
   commentaire?: string | null;
 };
 
@@ -136,14 +137,18 @@ export function ProjetForm({
           <Choix nom="meteo" valeurs={METEOS} defaut={valeurs.meteo} />
         </div>
         <div>
-          <label className={labelClass}>Budget (MAD HT)</label>
-          <input type="number" min="0" step="100" name="budget" defaultValue={valeurs.budget ?? 0} className={inputClass} />
+          <label className={labelClass}>Montant du marché (MAD HT)</label>
+          <input type="number" min="0" step="any" name="budget" defaultValue={valeurs.budget ?? 0} className={inputClass} />
         </div>
-        <div className="sm:col-span-2">
+        <div>
+          <label className={labelClass}>TVA (%)</label>
+          <input type="number" min="0" max="100" step="1" name="tauxTva" defaultValue={valeurs.tauxTva ?? 20} className={inputClass} />
+        </div>
+        <div>
           <label className={labelClass}>Début *</label>
           <input type="date" name="debut" required defaultValue={dateInput(valeurs.debut)} className={inputClass} />
         </div>
-        <div className="sm:col-span-2">
+        <div>
           <label className={labelClass}>Fin *</label>
           <input type="date" name="fin" required defaultValue={dateInput(valeurs.fin)} className={inputClass} />
         </div>
@@ -173,13 +178,17 @@ export type ValeursTache = {
   fin?: Date;
   chargeJours?: number;
   avancement?: number;
+  predecesseurs?: string[];
 };
+
+export type TacheChoisissable = { id: string; nom: string; phase: string | null; jalon: boolean };
 
 export function TacheForm({
   action,
   valeurs = {},
   membres,
   phases,
+  autresTaches,
   annuler,
   retour,
 }: {
@@ -187,9 +196,11 @@ export function TacheForm({
   valeurs?: ValeursTache;
   membres: Option[];
   phases: Option[];
+  autresTaches: TacheChoisissable[];
   annuler: string;
   retour?: string;
 }) {
+  const coches = new Set(valeurs.predecesseurs ?? []);
   return (
     <form action={action} className="space-y-4">
       {retour && <input type="hidden" name="retour" value={retour} />}
@@ -239,6 +250,33 @@ export function TacheForm({
         <label className={labelClass}>Description</label>
         <textarea name="description" rows={3} defaultValue={valeurs.description ?? ""} className={inputClass} />
       </div>
+      {autresTaches.length > 0 && (
+        <div>
+          <label className={labelClass}>Prédécesseurs (cette tâche commence après leur fin)</label>
+          <div className="mt-1 max-h-56 overflow-y-auto rounded-md border border-slate-300 bg-white p-2">
+            {autresTaches.map((t) => (
+              <label key={t.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  name="predecesseurs"
+                  value={t.id}
+                  defaultChecked={coches.has(t.id)}
+                  className="h-4 w-4"
+                />
+                <span>
+                  {t.jalon && "◆ "}
+                  {t.nom}
+                </span>
+                {t.phase && <span className="text-xs text-slate-400">· {t.phase}</span>}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Si un prédécesseur finit trop tard, la tâche et ses propres successeurs sont repoussés
+            automatiquement. Un lien qui créerait une boucle est ignoré.
+          </p>
+        </div>
+      )}
       <Boutons annuler={annuler} />
     </form>
   );
@@ -334,7 +372,7 @@ export function DepenseForm({ action }: { action: (formData: FormData) => void }
       </div>
       <div>
         <label className={labelClass}>Montant (MAD)</label>
-        <input type="number" min="0" step="1" name="montant" required className={inputClass} />
+        <input type="number" min="0" step="any" name="montant" required className={inputClass} />
       </div>
       <div>
         <label className={labelClass}>Date</label>

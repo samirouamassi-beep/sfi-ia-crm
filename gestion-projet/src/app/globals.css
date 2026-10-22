@@ -9,3 +9,16 @@ body {
   background: #f8fafc;
   color: #0f172a;
 }
+
+/* Rapports imprimables (Rapport PDF) : A4, fond blanc, couleurs conservées. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  body {
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -1,4 +1,4 @@
-# Script de démonstration client (≈ 25 minutes)
+# Script de démonstration client (≈ 30 minutes)
 
 **Contexte client** : intégrateur en télégestion, automatisme, mesures physico-chimiques et
 détection de fuites, qui répond aux appels d'offres de l'ONEE (Branche Eau), des SRM et des
@@ -30,10 +30,13 @@ vos marchés, vos équipes terrain et votre marge. »**
 
 - Offres en cours, montant en jeu, **taux de réussite**, **cautions provisoires immobilisées**.
 - Échéances en rouge à moins de 7 jours ; notes (visite des lieux, pièces manquantes).
-- Montrer un AO perdu (moins-disant à -11 %) : capitaliser sur les prix des concurrents.
+- Montrer un AO perdu (moins-disant à -11 %) : capitaliser sur les prix des concurrents ;
+  sa caution provisoire n'est toujours pas restituée → alerte « relancer la mainlevée ».
+- **Cautions en cours** (bas de page) : provisoires et définitives, par banque et échéance.
 - Ouvrir l'AO déposé auprès de la SRM Souss-Massa → **« Marché gagné → créer le projet »** :
   le projet est créé avec le maître d'ouvrage, le n° de marché, le montant et les phases types
-  (études, approvisionnement, installation, programmation, essais, réception).
+  (études, approvisionnement, installation, programmation, essais, réception), et sa caution
+  définitive à émettre (3 % du marché).
 
 ### 3. Marché en dérive : analyseurs qualité de l'eau ONEE (5 min)
 
@@ -46,22 +49,33 @@ vos marchés, vos équipes terrain et votre marge. »**
 ### 4. Marché en retard : sectorisation et détection de fuites RADEEF (5 min)
 
 - **Gantt** : campagne de corrélation en retard (rouge) après le blocage en douane,
-  réception provisoire en jalon.
+  réception provisoire en jalon. Les flèches montrent les dépendances, la barre grise le
+  planning de référence : le glissement se voit immédiatement.
+- **Glisser une barre** d'une semaine : les tâches suivantes sont repoussées
+  automatiquement (message « n tâches repoussées »). Tirer le bord d'une barre l'allonge.
+- Onglet **Tâches** : colonne « Écart réf. » (+n jours) et prédécesseurs de chaque tâche.
 - **Kanban** : faire glisser une tâche (« Mesure des débits de nuit ») vers « En revue ».
 - Ajouter une tâche en direct (« + Tâche »), par exemple « Intervention de nuit secteur 12 ».
 
-### 5. Équipes terrain (4 min)
+### 5. Rapports (2 min)
+
+- **Rapport PDF** d'un marché (bouton en haut de la fiche) : situation, phases, jalons avec
+  écart à la référence, budget HT, risques — prêt à envoyer au maître d'ouvrage.
+- **Revue PDF** et **Exporter Excel** depuis le tableau de bord : tout le portefeuille, AO
+  et cautions dans un classeur.
+
+### 6. Équipes terrain (4 min)
 
 - **Plan de charge** : techniciens instrumentation et chantier en surcharge sur les mêmes
   semaines → arbitrage entre chantiers ou renfort intérimaire.
 - **Feuille de temps** : saisir une demi-journée sur un site, montrer qu'elle alimente le
   coût du marché.
 
-### 6. Planning portefeuille (1 min)
+### 7. Planning portefeuille (1 min)
 
 Vue Gantt de tous les marchés avec leurs jalons de réception.
 
-### 7. Questions de cadrage (le plus important, 5 min)
+### 8. Questions de cadrage (le plus important, 5 min)
 
 - Combien d'AO par an ? Qui les prépare ? Souhaitez-vous gérer les pièces (CPS, RC, BPDE,
   attestations, cautions) et une bibliothèque de références / prix ?
