@@ -20,6 +20,10 @@ const supabase = () => {
   return url && key ? { url: url.replace(/\/$/, ""), key, bucket: process.env.SUPABASE_BUCKET ?? "item-photos" } : null;
 };
 
+/** En-têtes d'authentification : `apikey` est requis par les nouvelles clés secrètes
+ * (sb_secret_…), `Authorization` par les anciennes clés service_role (JWT). */
+const authHeaders = (key: string) => ({ apikey: key, Authorization: `Bearer ${key}` });
+
 export class PhotoError extends Error {}
 
 export async function uploadPhoto(userId: string, itemId: string, file: File): Promise<{ storagePath: string; url: string }> {
@@ -34,7 +38,7 @@ export async function uploadPhoto(userId: string, itemId: string, file: File): P
   if (sb) {
     const res = await fetch(`${sb.url}/storage/v1/object/${sb.bucket}/${storagePath}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${sb.key}`, "Content-Type": file.type, "x-upsert": "false" },
+      headers: { ...authHeaders(sb.key), "Content-Type": file.type, "x-upsert": "false" },
       body: bytes,
     });
     if (!res.ok) throw new PhotoError(`Envoi de la photo impossible (Supabase ${res.status}).`);
@@ -55,7 +59,7 @@ export async function deletePhoto(storagePath: string): Promise<void> {
   if (sb) {
     await fetch(`${sb.url}/storage/v1/object/${sb.bucket}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${sb.key}`, "Content-Type": "application/json" },
+      headers: { ...authHeaders(sb.key), "Content-Type": "application/json" },
       body: JSON.stringify({ prefixes: [storagePath] }),
     });
     return;
