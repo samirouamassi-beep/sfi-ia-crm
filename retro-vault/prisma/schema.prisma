@@ -1,0 +1,193 @@
+// RetroGame Vault — schéma relationnel (PostgreSQL / Supabase).
+//
+// Trois blocs :
+//  1. Référentiel partagé (Platform, Product, PriceSnapshot) : alimenté par IGDB et la source
+//     de cotation, commun à tous les collectionneurs.
+//  2. Données du collectionneur (CollectionItem, ItemPhoto, WishlistItem) : toujours rattachées
+//     à un User (colonne userId => politique RLS "userId = auth.uid()" côté Supabase).
+//  3. Les montants sont stockés en centimes d'euro (Int) pour éviter les erreurs d'arrondi.
+//
+// Les indicateurs (valeur estimée, plus-value, ROI, variations) sont calculés à la lecture
+// dans src/lib/valuation.ts et src/lib/stats.ts, jamais stockés.
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+enum ProductKind {
+  GAME
+  CONSOLE
+  ACCESSORY
+}
+
+enum Region {
+  PAL
+  NTSC_U
+  NTSC_J
+  OTHER
+}
+
+/// Format de l'exemplaire, critère n°1 de la cote.
+enum Completeness {
+  LOOSE // cartouche / disque seul
+  CIB // complet en boîte avec notice
+  SEALED // neuf sous blister
+}
+
+/// État d'un composant (boîte, notice, support).
+enum Grade {
+  POOR // Mauvais
+  GOOD // Bon
+  VERY_GOOD // Très bon
+  MINT // Neuf
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid // = auth.users.id avec Supabase Auth
+  email     String   @unique
+  name      String?
+  currency  String   @default("EUR")
+  createdAt DateTime @default(now())
+
+  items    CollectionItem[]
+  wishlist WishlistItem[]
+}
+
+model Platform {
+  id                String  @id @default(cuid())
+  slug              String  @unique // "snes", "megadrive"...
+  name              String // "Super Nintendo"
+  shortName         String // "SNES"
+  manufacturer      String // "Nintendo"
+  releaseYear       Int?
+  igdbId            Int?    @unique
+  /// Libellé de console côté PriceCharting ("Super Nintendo", "PAL Super Nintendo"...)
+  priceChartingName String?
+  sortOrder         Int     @default(0)
+
+  products Product[]
+}
+
+/// Fiche de référence d'un jeu / d'une console / d'un accessoire, sur une plateforme donnée.
+model Product {
+  id          String      @id @default(cuid())
+  kind        ProductKind @default(GAME)
+  title       String
+  platformId  String
+  platform    Platform    @relation(fields: [platformId], references: [id])
+  igdbId      Int?
+  coverUrl    String?
+  releaseYear Int?
+  developer   String?
+  publisher   String?
+  genres      String[]
+  summary     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  prices     PriceSnapshot[]
+  priceLinks PriceSourceLink[]
+  items      CollectionItem[]
+  wishlist   WishlistItem[]
+
+  @@unique([igdbId, platformId])
+  @@index([title])
+  @@index([platformId])
+}
+
+/// Correspondance produit/région <-> fiche de la source de cotation (une fiche par région
+/// chez PriceCharting : "Super Nintendo" / "PAL Super Nintendo" / "JP Super Famicom").
+model PriceSourceLink {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  region    Region
+  provider  String // "pricecharting"
+  sourceId  String
+  label     String? // libellé côté source, pour vérification
+  createdAt DateTime @default(now())
+
+  @@unique([productId, region, provider])
+}
+
+/// Relevé de cote à une date : une ligne par produit / région / jour.
+model PriceSnapshot {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  region          Region
+  capturedAt      DateTime @db.Date
+  looseCents      Int?
+  cibCents        Int?
+  sealedCents     Int?
+  boxOnlyCents    Int?
+  manualOnlyCents Int?
+  source          String // "pricecharting", "manual", "seed"...
+
+  @@unique([productId, region, capturedAt])
+  @@index([productId, region, capturedAt(sort: Desc)])
+}
+
+/// Exemplaire physique possédé par un collectionneur.
+model CollectionItem {
+  id               String       @id @default(cuid())
+  userId           String       @db.Uuid
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product      @relation(fields: [productId], references: [id])
+  region           Region
+  completeness     Completeness
+  boxGrade         Grade?
+  manualGrade      Grade?
+  mediaGrade       Grade? // cartouche / disque / console
+  /// Note fine optionnelle sur 10 (en complément des états)
+  boxScore         Int?
+  manualScore      Int?
+  mediaScore       Int?
+  acquiredAt       DateTime?    @db.Date
+  purchaseCents    Int?
+  /// Valeur saisie à la main : prime sur la cote automatique (pièce rare, variante...)
+  manualValueCents Int?
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  photos ItemPhoto[]
+
+  @@index([userId])
+  @@index([productId])
+}
+
+model ItemPhoto {
+  id          String         @id @default(cuid())
+  itemId      String
+  item        CollectionItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  storagePath String // chemin dans le bucket (pour suppression)
+  url         String
+  position    Int            @default(0)
+  createdAt   DateTime       @default(now())
+
+  @@index([itemId])
+}
+
+model WishlistItem {
+  id               String       @id @default(cuid())
+  userId           String       @db.Uuid
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product      @relation(fields: [productId], references: [id])
+  region           Region
+  completeness     Completeness @default(CIB)
+  targetPriceCents Int?
+  priority         Int          @default(2) // 1 = haute, 3 = basse
+  notes            String?
+  createdAt        DateTime     @default(now())
+
+  @@unique([userId, productId, region, completeness])
+  @@index([userId])
+}
