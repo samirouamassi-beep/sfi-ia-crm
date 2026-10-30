@@ -10,7 +10,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import type { Completeness, Grade, Region } from "../src/generated/prisma/enums";
 import { PLATFORMS } from "../src/lib/catalog";
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.RETROVAULT_DATABASE_URL ?? process.env.DATABASE_URL }) });
 
 type Demo = {
   title: string;

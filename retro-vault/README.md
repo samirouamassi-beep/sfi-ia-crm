@@ -83,8 +83,9 @@ manuelle prime toujours. Un exemplaire sans cote est compté à son prix d'achat
 
 ## Vers la production
 
-1. **Supabase** : `DATABASE_URL` = chaîne de connexion « Session » (port 5432), `prisma migrate deploy`,
-   bucket public `item-photos`.
+1. **Supabase** : `DATABASE_URL` = chaîne de connexion « Session pooler » (port 5432), bucket public
+   `item-photos`. Sur Vercel, si une variable `DATABASE_URL` est déjà partagée par l'équipe (autres
+   projets du dépôt), déclarer plutôt `RETROVAULT_DATABASE_URL`, qui prime.
 2. **Supabase Auth (multi-collectionneurs)** : remplacer `requireUserId()` / `currentUserId()` dans
    `src/lib/auth.ts` par la session Supabase (`auth.uid()` = `User.id`, déjà de type UUID) et activer
    la RLS `"userId" = auth.uid()` sur `CollectionItem`, `ItemPhoto` (via l'item) et `WishlistItem`.
