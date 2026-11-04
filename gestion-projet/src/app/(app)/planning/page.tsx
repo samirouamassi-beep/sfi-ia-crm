@@ -98,6 +98,10 @@ export default async function PlanningPage({
       </div>
       <Carte>
         <div className="space-y-3">
+          <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
+            Vue d&apos;ensemble en lecture seule. Pour déplacer ou allonger des tâches, ouvrez le Gantt
+            d&apos;un projet : cliquez sur son nom ci-dessous.
+          </p>
           <LegendeGantt />
           <Gantt lignes={lignes} />
         </div>
