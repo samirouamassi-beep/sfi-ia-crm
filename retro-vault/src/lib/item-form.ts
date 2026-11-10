@@ -21,6 +21,7 @@ export const ItemFormSchema = z
   .object({
     kind: z.enum(ProductKind),
     platformId: z.string().min(1, "Choisissez une plateforme"),
+    accessoryTypeId: z.preprocess((v) => (v === "" ? undefined : v), z.string().max(40).optional()),
     title: z.string().trim().min(1, "Titre obligatoire").max(200),
     igdbId: optInt(1, 10_000_000),
     coverUrl: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
@@ -55,6 +56,7 @@ export const ItemFormSchema = z
     const hasMedia = v.completeness !== "SEALED";
     return {
       ...v,
+      accessoryTypeId: v.kind === "ACCESSORY" ? v.accessoryTypeId : undefined,
       boxGrade: hasBox ? v.boxGrade : undefined,
       boxScore: hasBox ? v.boxScore : undefined,
       manualGrade: hasManual ? v.manualGrade : undefined,

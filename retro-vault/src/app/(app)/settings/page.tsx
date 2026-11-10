@@ -22,12 +22,16 @@ export default function SettingsPage() {
           <ButtonLink href="/settings/platforms" variant="secondary">
             🎮 Consoles
           </ButtonLink>
-          <ButtonLink href="/settings/attributes" variant="secondary">
+          <ButtonLink href="/settings/accessories" variant="secondary">
+            🔌 Accessoires
+          </ButtonLink>
+          <ButtonLink href="/settings/attributes" variant="secondary" className="col-span-2">
             🏷️ Caractéristiques
           </ButtonLink>
         </div>
         <p className="mt-2 text-xs text-ink-3">
-          Ajoutez ou masquez des consoles, et créez vos propres champs d&apos;exemplaire (avec notice, avec cale, édition…).
+          Consoles et types d&apos;accessoires (câble, caméra…) proposés à l&apos;ajout, et vos propres champs
+          d&apos;exemplaire (avec notice, avec cale, édition…).
         </p>
       </Card>
 

@@ -15,6 +15,7 @@ export type ProductInput = {
   publisher?: string | null;
   genres?: string[];
   summary?: string | null;
+  accessoryTypeId?: string | null;
 };
 
 /**
@@ -39,6 +40,8 @@ export async function findOrCreateProduct(input: ProductInput) {
         publisher: existing.publisher ?? input.publisher,
         summary: existing.summary ?? input.summary,
         genres: existing.genres.length ? existing.genres : (input.genres ?? []),
+        // Choix explicite du formulaire : prime sur le type déjà enregistré.
+        ...(input.accessoryTypeId !== undefined && { accessoryTypeId: input.accessoryTypeId }),
       },
     });
   }
@@ -55,6 +58,7 @@ export async function findOrCreateProduct(input: ProductInput) {
       publisher: input.publisher ?? null,
       genres: input.genres ?? [],
       summary: input.summary ?? null,
+      accessoryTypeId: input.accessoryTypeId ?? null,
     },
   });
 }

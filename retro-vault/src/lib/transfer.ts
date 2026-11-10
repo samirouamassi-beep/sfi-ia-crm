@@ -5,7 +5,7 @@ import "server-only";
 import { z } from "zod";
 import { prisma } from "./db";
 import { parseCsv, toCsv } from "./csv";
-import { Completeness, Grade, ProductKind, Region } from "./catalog";
+import { Completeness, Grade, ItemStatus, ProductKind, Region } from "./catalog";
 import { findOrCreateProduct } from "./products";
 import { parseEurosToCents } from "./money";
 import { normalizeValue, type AttributeDef } from "./attributes";
@@ -16,6 +16,7 @@ export const EXPORT_COLUMNS = [
   "box_grade", "manual_grade", "media_grade", "box_score", "manual_score", "media_score",
   "acquired_at", "purchase_eur", "manual_value_eur", "notes",
   "igdb_id", "release_year", "developer", "publisher", "genres", "cover_url",
+  "accessory_type", "status", "asking_price_eur", "sold_at", "sale_price_eur", "sale_fees_eur", "sale_channel",
 ] as const;
 
 export const ATTRIBUTE_COLUMN_PREFIX = "attr:";
@@ -30,7 +31,7 @@ export async function exportTable(userId: string): Promise<ExportTable> {
   const [items, attributes] = await Promise.all([
     prisma.collectionItem.findMany({
       where: { userId },
-      include: { product: { include: { platform: true } }, attributeValues: true },
+      include: { product: { include: { platform: true, accessoryType: true } }, attributeValues: true },
       orderBy: [{ product: { platform: { sortOrder: "asc" } } }, { product: { title: "asc" } }],
     }),
     listAttributes(userId),
@@ -58,6 +59,13 @@ export async function exportTable(userId: string): Promise<ExportTable> {
     publisher: i.product.publisher,
     genres: i.product.genres.join("|"),
     cover_url: i.product.coverUrl,
+    accessory_type: i.product.accessoryType?.name ?? null,
+    status: i.status,
+    asking_price_eur: euros(i.askingPriceCents),
+    sold_at: isoDate(i.soldAt),
+    sale_price_eur: euros(i.salePriceCents),
+    sale_fees_eur: euros(i.saleFeesCents),
+    sale_channel: i.saleChannel,
     ...Object.fromEntries(
       attributes.map((a, k) => {
         const v = i.attributeValues.find((x) => x.attributeId === a.id)?.value ?? null;
@@ -128,7 +136,22 @@ const ImportRow = z.object({
   publisher: optional(z.string().max(200)),
   genres: optional(z.union([z.string(), z.array(z.string())])),
   cover_url: optional(z.url()),
+  accessory_type: optional(z.string().trim().max(60)),
+  status: optEnum(ItemStatus),
+  asking_price_eur: optEuros,
+  sold_at: optional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date AAAA-MM-JJ attendue")),
+  sale_price_eur: optEuros,
+  sale_fees_eur: optEuros,
+  sale_channel: optional(z.string().max(60)),
 });
+
+/** Type d'accessoire par nom (insensible à la casse), créé s'il n'existe pas encore. */
+async function accessoryTypeIdFor(name: string): Promise<string> {
+  const existing = await prisma.accessoryType.findFirst({ where: { name: { equals: name, mode: "insensitive" } } });
+  if (existing) return existing.id;
+  const last = await prisma.accessoryType.findFirst({ orderBy: { position: "desc" } });
+  return (await prisma.accessoryType.create({ data: { name, position: (last?.position ?? -1) + 1 } })).id;
+}
 
 export type ImportReport = { imported: number; errors: { line: number; message: string }[] };
 
@@ -170,8 +193,16 @@ export async function importRows(userId: string, raw: unknown[]): Promise<Import
       report.errors.push({ line, message: `plateforme inconnue « ${r.platform} »` });
       continue;
     }
+    const status = r.status ?? "OWNED";
+    if (status === "SOLD" && (!r.sold_at || r.sale_price_eur == null)) {
+      report.errors.push({ line, message: "exemplaire vendu : sold_at et sale_price_eur obligatoires" });
+      continue;
+    }
+    const kind = r.kind ?? "GAME";
+    const accessoryTypeId = kind === "ACCESSORY" && r.accessory_type ? await accessoryTypeIdFor(r.accessory_type) : undefined;
     const product = await findOrCreateProduct({
-      kind: r.kind ?? "GAME",
+      kind,
+      accessoryTypeId,
       title: r.title,
       platformId: platform.id,
       igdbId: r.igdb_id,
@@ -197,6 +228,12 @@ export async function importRows(userId: string, raw: unknown[]): Promise<Import
         purchaseCents: r.purchase_eur,
         manualValueCents: r.manual_value_eur,
         notes: r.notes,
+        status,
+        askingPriceCents: status === "FOR_SALE" ? r.asking_price_eur : null,
+        soldAt: status === "SOLD" && r.sold_at ? new Date(`${r.sold_at}T00:00:00Z`) : null,
+        salePriceCents: status === "SOLD" ? r.sale_price_eur : null,
+        saleFeesCents: status === "SOLD" ? r.sale_fees_eur : null,
+        saleChannel: status === "SOLD" ? (r.sale_channel ?? null) : null,
       },
     });
     await saveAttributeValues(item.id, attrs.values);

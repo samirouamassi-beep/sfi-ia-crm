@@ -55,9 +55,28 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {(d.forSale.count > 0 || d.sales.count > 0) && (
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/collection?status=for_sale" className="rounded-2xl border border-line bg-surface p-4 hover:border-ink-3">
+            <p className="text-xs text-ink-3">À vendre</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{d.forSale.count}</p>
+            <p className="text-xs text-ink-3">{formatCents(d.forSale.askingCents, { round: true })} demandés</p>
+          </Link>
+          <Link href="/collection?status=sold" className="rounded-2xl border border-line bg-surface p-4 hover:border-ink-3">
+            <p className="text-xs text-ink-3">Ventes</p>
+            <p className="mt-1 text-lg font-semibold">
+              <Trend value={d.sales.realizedCents}>{formatDelta(d.sales.realizedCents)}</Trend>
+            </p>
+            <p className="text-xs text-ink-3">
+              {d.sales.count} vendu{d.sales.count > 1 ? "s" : ""} · {formatCents(d.sales.revenueCents, { round: true })} encaissés
+            </p>
+          </Link>
+        </div>
+      )}
+
       {d.unpriced > 0 && (
         <p className="text-xs text-ink-3">
-          {d.unpriced} pièce{d.unpriced > 1 ? "s" : ""} sans cote : comptée{d.unpriced > 1 ? "s" : ""} à leur prix d&apos;achat.
+          {`${d.unpriced} pièce${d.unpriced > 1 ? "s" : ""} sans cote : comptée${d.unpriced > 1 ? "s" : ""} à leur prix d'achat.`}
         </p>
       )}
 

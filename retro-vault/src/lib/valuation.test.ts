@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { basePriceCents, conditionFactor, estimateValueCents, gain, scoreFactor } from "./valuation";
+import { basePriceCents, conditionFactor, estimateValueCents, gain, realizedGain, saleNetCents, scoreFactor } from "./valuation";
 
 const quote = { looseCents: 2000, cibCents: 6000, sealedCents: 30000, boxOnlyCents: 2500, manualOnlyCents: 800 };
 
@@ -43,4 +43,10 @@ test("plus-value et ROI", () => {
   assert.deepEqual(gain(15000, 10000), { deltaCents: 5000, ratio: 0.5 });
   assert.deepEqual(gain(15000, 0), { deltaCents: 15000, ratio: null });
   assert.deepEqual(gain(null, 10000), { deltaCents: null, ratio: null });
+});
+
+test("plus-value réalisée : net encaissé (prix − frais) moins achat", () => {
+  assert.equal(saleNetCents({ purchaseCents: 1000, salePriceCents: 2500, saleFeesCents: 300 }), 2200);
+  assert.deepEqual(realizedGain({ purchaseCents: 1000, salePriceCents: 2500, saleFeesCents: 300 }), { deltaCents: 1200, ratio: 1.2 });
+  assert.deepEqual(realizedGain({ purchaseCents: 1000, salePriceCents: null }), { deltaCents: null, ratio: null });
 });

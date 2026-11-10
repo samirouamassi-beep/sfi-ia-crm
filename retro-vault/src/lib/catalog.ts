@@ -4,12 +4,13 @@
 import {
   AttributeType,
   Completeness,
+  ItemStatus,
   Grade,
   ProductKind,
   Region,
 } from "@/generated/prisma/enums";
 
-export { AttributeType, Completeness, Grade, ProductKind, Region };
+export { AttributeType, Completeness, Grade, ItemStatus, ProductKind, Region };
 
 export const COMPLETENESS_LABELS: Record<Completeness, { label: string; hint: string }> = {
   LOOSE: { label: "Loose", hint: "Cartouche / disque seul" },
@@ -37,12 +38,43 @@ export const KIND_LABELS: Record<ProductKind, string> = {
   ACCESSORY: "Accessoire",
 };
 
+export const KIND_PLURAL_LABELS: Record<ProductKind, string> = {
+  GAME: "Jeux",
+  CONSOLE: "Consoles",
+  ACCESSORY: "Accessoires",
+};
+
 export const ATTRIBUTE_TYPE_LABELS: Record<AttributeType, { label: string; hint: string }> = {
   BOOLEAN: { label: "Oui / non", hint: "Case à cocher : « Avec notice », « Avec cale »…" },
   SELECT: { label: "Liste de choix", hint: "Une valeur parmi une liste : Édition, Langue…" },
   TEXT: { label: "Texte", hint: "Texte libre : n° de série, provenance…" },
   NUMBER: { label: "Nombre", hint: "Nombre de manettes, de jeux inclus…" },
 };
+
+export const STATUS_LABELS: Record<ItemStatus, string> = {
+  OWNED: "En collection",
+  FOR_SALE: "À vendre",
+  SOLD: "Vendu",
+};
+
+export const STATUS_VALUES = Object.keys(STATUS_LABELS) as ItemStatus[];
+
+/** Canaux de vente proposés (saisie libre possible). */
+export const SALE_CHANNELS = ["eBay", "Leboncoin", "Vinted", "Rakuten", "Facebook Marketplace", "Brocante / salon", "Boutique", "Entre collectionneurs"];
+
+/** Types d'accessoires créés au premier déploiement, modifiables ensuite dans Plus → Accessoires. */
+export const DEFAULT_ACCESSORY_TYPES = [
+  "Manette",
+  "Câble AV / Péritel",
+  "Câble HDMI / upscaler",
+  "Alimentation",
+  "Caméra",
+  "Carte mémoire",
+  "Pistolet optique",
+  "Adaptateur / convertisseur",
+  "Volant / périphérique",
+  "Housse / rangement",
+];
 
 export const ATTRIBUTE_TYPE_VALUES = Object.keys(ATTRIBUTE_TYPE_LABELS) as AttributeType[];
 

@@ -3,7 +3,7 @@
 
 import "server-only";
 import ExcelJS from "exceljs";
-import { COMPLETENESS_LABELS, KIND_LABELS, REGION_LABELS } from "./catalog";
+import { COMPLETENESS_LABELS, KIND_LABELS, REGION_LABELS, STATUS_LABELS } from "./catalog";
 import { formatValue } from "./attributes";
 import { PRIORITY_LABELS } from "./wishlist";
 import { gradeText, type Report } from "./report";
@@ -58,6 +58,8 @@ export async function buildWorkbook(report: Report): Promise<Buffer> {
     { header: "Titre", key: "title", width: 40 },
     { header: "Console", key: "platform", width: 22 },
     { header: "Type", key: "kind", width: 11 },
+    { header: "Accessoire", key: "accessory", width: 18 },
+    { header: "Statut", key: "status", width: 13 },
     { header: "Région", key: "region", width: 9 },
     { header: "Format", key: "completeness", width: 13 },
     { header: "État boîte", key: "box", width: 14 },
@@ -69,6 +71,7 @@ export async function buildWorkbook(report: Report): Promise<Buffer> {
     { header: "Valeur estimée", key: "value", width: 14, numFmt: EUR },
     { header: "Plus-value", key: "gain", width: 13, numFmt: EUR },
     { header: "Plus-value %", key: "ratio", width: 12, numFmt: PCT },
+    { header: "Prix demandé", key: "asking", width: 13, numFmt: EUR },
     { header: "Notes", key: "notes", width: 40 },
   ];
   addTable(
@@ -78,6 +81,8 @@ export async function buildWorkbook(report: Report): Promise<Buffer> {
       title: r.product.title,
       platform: r.product.platform.name,
       kind: KIND_LABELS[r.product.kind],
+      accessory: r.product.accessoryType?.name ?? null,
+      status: STATUS_LABELS[r.status],
       region: REGION_LABELS[r.region],
       completeness: COMPLETENESS_LABELS[r.completeness].label,
       box: gradeText(r.boxGrade, r.boxScore),
@@ -94,6 +99,7 @@ export async function buildWorkbook(report: Report): Promise<Buffer> {
       value: euros(r.valueCents),
       gain: euros(r.deltaCents),
       ratio: r.ratio,
+      asking: euros(r.askingPriceCents),
       notes: r.notes,
     })),
     { title: "label", purchase: "SUM(COL2:COLLAST)", value: "SUM(COL2:COLLAST)", gain: "SUM(COL2:COLLAST)" }
@@ -124,6 +130,41 @@ export async function buildWorkbook(report: Report): Promise<Buffer> {
     report.filterLabel ? `Filtre : ${report.filterLabel}` : "Toute la collection",
   ]);
   platforms.addRow([`Généré le ${report.generatedAt.toLocaleDateString("fr-FR")} · pièces sans cote comptées à leur prix d'achat`]);
+
+  // --- Ventes ---
+  if (report.sales && report.sales.length > 0) {
+    const sales = wb.addWorksheet("Ventes");
+    addTable(
+      sales,
+      [
+        { header: "Titre", key: "title", width: 40 },
+        { header: "Console", key: "platform", width: 22 },
+        { header: "Type", key: "kind", width: 18 },
+        { header: "Format", key: "completeness", width: 13 },
+        { header: "Vendu le", key: "soldAt", width: 12, numFmt: "dd/mm/yyyy" },
+        { header: "Vendu sur", key: "channel", width: 18 },
+        { header: "Prix d'achat", key: "purchase", width: 13, numFmt: EUR },
+        { header: "Prix de vente", key: "price", width: 13, numFmt: EUR },
+        { header: "Frais", key: "fees", width: 10, numFmt: EUR },
+        { header: "Net encaissé", key: "net", width: 13, numFmt: EUR },
+        { header: "Plus-value réalisée", key: "gain", width: 16, numFmt: EUR },
+      ],
+      report.sales.map((r) => ({
+        title: r.product.title,
+        platform: r.product.platform.name,
+        kind: r.product.accessoryType?.name ?? KIND_LABELS[r.product.kind],
+        completeness: COMPLETENESS_LABELS[r.completeness].label,
+        soldAt: r.soldAt,
+        channel: r.saleChannel,
+        purchase: euros(r.purchaseCents),
+        price: euros(r.salePriceCents),
+        fees: euros(r.saleFeesCents),
+        net: euros(r.valueCents),
+        gain: euros(r.deltaCents),
+      })),
+      { title: "label", purchase: "SUM(COL2:COLLAST)", price: "SUM(COL2:COLLAST)", fees: "SUM(COL2:COLLAST)", net: "SUM(COL2:COLLAST)", gain: "SUM(COL2:COLLAST)" }
+    );
+  }
 
   // --- Wishlist ---
   if (report.wishlist) {

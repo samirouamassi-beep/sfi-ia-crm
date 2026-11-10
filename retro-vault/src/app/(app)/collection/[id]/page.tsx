@@ -3,13 +3,14 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { LineChart } from "@/components/line-chart";
 import { Badge, Button, ButtonLink, Card, CardTitle, Cover, Trend } from "@/components/ui";
 import { requireUserId } from "@/lib/auth";
-import { COMPLETENESS_LABELS, GRADE_LABELS, KIND_LABELS, REGION_LABELS, type Grade } from "@/lib/catalog";
+import { COMPLETENESS_LABELS, GRADE_LABELS, KIND_LABELS, REGION_LABELS, STATUS_LABELS, type Grade } from "@/lib/catalog";
 import { loadPriceIndex } from "@/lib/collection";
 import { prisma } from "@/lib/db";
-import { formatCents, formatDelta, formatPercent } from "@/lib/money";
-import { basePriceCents, conditionFactor, estimateValueCents, gain } from "@/lib/valuation";
+import { centsToEurosInput, formatCents, formatDelta, formatPercent } from "@/lib/money";
+import { basePriceCents, conditionFactor, estimateValueCents, gain, realizedGain, saleNetCents } from "@/lib/valuation";
 import { formatValue } from "@/lib/attributes";
-import { deleteItem, refreshItemPrice, removePhoto } from "../actions";
+import { SaleForm } from "@/components/sale-form";
+import { deleteItem, refreshItemPrice, removePhoto, updateSale } from "../actions";
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "UTC" });
 
@@ -25,7 +26,7 @@ export default async function ItemPage({
   const item = await prisma.collectionItem.findFirst({
     where: { id, userId },
     include: {
-      product: { include: { platform: true } },
+      product: { include: { platform: true, accessoryType: true } },
       photos: { orderBy: { position: "asc" } },
       attributeValues: { include: { attribute: true }, orderBy: { attribute: { position: "asc" } } },
     },
@@ -40,7 +41,11 @@ export default async function ItemPage({
   });
   const quote = (await loadPriceIndex([p.id])).quoteAt(p.id, item.region, new Date());
   const valueCents = estimateValueCents(item, quote);
-  const { deltaCents, ratio } = gain(valueCents, item.purchaseCents);
+  const isSold = item.status === "SOLD";
+  // Vendu : plus-value réalisée sur le net encaissé ; sinon plus-value latente sur la cote.
+  const { deltaCents, ratio } = isSold ? realizedGain(item) : gain(valueCents, item.purchaseCents);
+  const net = saleNetCents(item);
+  const isoDay = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
   const base = quote ? basePriceCents(quote, item.completeness) : null;
   const factor = conditionFactor(item);
 
@@ -62,7 +67,13 @@ export default async function ItemPage({
             <Badge>{p.platform.shortName}</Badge>
             <Badge>{REGION_LABELS[item.region]}</Badge>
             <Badge>{COMPLETENESS_LABELS[item.completeness].label}</Badge>
-            {p.kind !== "GAME" && <Badge>{KIND_LABELS[p.kind]}</Badge>}
+            {p.kind !== "GAME" && <Badge>{p.accessoryType?.name ?? KIND_LABELS[p.kind]}</Badge>}
+            {item.status !== "OWNED" && (
+              <Badge className={item.status === "SOLD" ? "text-good" : "text-accent"}>
+                {STATUS_LABELS[item.status]}
+                {item.status === "FOR_SALE" && item.askingPriceCents != null && ` · ${formatCents(item.askingPriceCents, { round: true })}`}
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-ink-3">{[p.releaseYear, p.developer, p.publisher].filter(Boolean).join(" · ")}</p>
           {p.genres.length > 0 && <p className="text-xs text-ink-3">{p.genres.join(", ")}</p>}
@@ -70,19 +81,35 @@ export default async function ItemPage({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
+        {isSold ? (
+          <Card>
+            <p className="text-xs text-ink-3">Vendu</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{formatCents(net)}</p>
+            <p className="mt-1 text-xs text-ink-3">
+              {[
+                item.soldAt && `le ${dateFmt.format(item.soldAt)}`,
+                item.saleChannel && `sur ${item.saleChannel}`,
+                item.saleFeesCents ? `${formatCents(item.saleFeesCents)} de frais déduits` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </Card>
+        ) : (
+          <Card>
+            <p className="text-xs text-ink-3">Valeur estimée</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{formatCents(valueCents)}</p>
+            <p className="mt-1 text-xs text-ink-3">
+              {item.manualValueCents != null
+                ? "Valeur saisie manuellement"
+                : quote
+                  ? `Cote ${COMPLETENESS_LABELS[item.completeness].label} ${formatCents(base)} × état ${factor.toFixed(2).replace(".", ",")}`
+                  : "Pas encore de cote"}
+            </p>
+          </Card>
+        )}
         <Card>
-          <p className="text-xs text-ink-3">Valeur estimée</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{formatCents(valueCents)}</p>
-          <p className="mt-1 text-xs text-ink-3">
-            {item.manualValueCents != null
-              ? "Valeur saisie manuellement"
-              : quote
-                ? `Cote ${COMPLETENESS_LABELS[item.completeness].label} ${formatCents(base)} × état ${factor.toFixed(2).replace(".", ",")}`
-                : "Pas encore de cote"}
-          </p>
-        </Card>
-        <Card>
-          <p className="text-xs text-ink-3">Plus-value</p>
+          <p className="text-xs text-ink-3">{isSold ? "Plus-value réalisée" : "Plus-value"}</p>
           <p className="mt-1 text-2xl font-semibold">
             <Trend value={deltaCents}>{deltaCents != null ? formatDelta(deltaCents) : "—"}</Trend>
           </p>
@@ -91,6 +118,21 @@ export default async function ItemPage({
           </p>
         </Card>
       </div>
+
+      <Card>
+        <CardTitle>Vente</CardTitle>
+        <SaleForm
+          action={updateSale.bind(null, item.id)}
+          initial={{
+            status: item.status,
+            asking: centsToEurosInput(item.askingPriceCents),
+            soldAt: isoDay(item.soldAt),
+            salePrice: centsToEurosInput(item.salePriceCents),
+            saleFees: centsToEurosInput(item.saleFeesCents),
+            saleChannel: item.saleChannel ?? "",
+          }}
+        />
+      </Card>
 
       <Card>
         <CardTitle

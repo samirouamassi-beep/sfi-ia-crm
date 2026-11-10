@@ -60,6 +60,7 @@ src/app/
   (app)/settings/                Export / import, sources de données, déconnexion
   (app)/settings/platforms/      Paramétrage des consoles (ajout, ordre, masquage)
   (app)/settings/attributes/     Caractéristiques personnalisées (avec notice, édition…)
+  (app)/settings/accessories/    Types d'accessoires (câble, caméra, manette…)
   (app)/share/                   Résumé visuel partageable (PNG 1080×1350 via next/og)
   api/igdb/search                Auto-complétion
   api/export                     Téléchargement Excel / PDF (filtres de la liste) et CSV / JSON (sauvegarde)
@@ -77,6 +78,10 @@ src/app/
 - **Caractéristiques personnalisées** : `ItemAttribute` (oui/non, liste de choix, texte, nombre ;
   types de produit concernés) et `ItemAttributeValue` (valeur par exemplaire). Exportées et importées
   dans des colonnes `attr:<nom>`. Elles n'entrent pas dans le calcul de la valeur.
+- **Vente** : `CollectionItem.status` (en collection / à vendre / vendu), prix demandé, date, prix,
+  frais et canal de vente. Un exemplaire vendu sort de la valeur de la collection à sa date de
+  vente ; sa plus-value devient « réalisée » (net encaissé − prix d'achat).
+- **Accessoires** : `AccessoryType` (référentiel paramétrable), rattaché au `Product`.
 - Montants en **centimes d'euro** (Int). Valeurs, plus-values et variations sont **calculées à la
   lecture**, jamais stockées : changer la formule d'état réévalue tout l'historique.
 
