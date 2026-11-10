@@ -1,4 +1,5 @@
 // Export / import de la collection (CSV ou JSON, même jeu de colonnes).
+// Les caractéristiques personnalisées occupent une colonne chacune : "attr:<nom>".
 
 import "server-only";
 import { z } from "zod";
@@ -7,6 +8,8 @@ import { parseCsv, toCsv } from "./csv";
 import { Completeness, Grade, ProductKind, Region } from "./catalog";
 import { findOrCreateProduct } from "./products";
 import { parseEurosToCents } from "./money";
+import { normalizeValue, type AttributeDef } from "./attributes";
+import { listAttributes, saveAttributeValues } from "./attributes-store";
 
 export const EXPORT_COLUMNS = [
   "title", "platform", "kind", "region", "completeness",
@@ -15,18 +18,25 @@ export const EXPORT_COLUMNS = [
   "igdb_id", "release_year", "developer", "publisher", "genres", "cover_url",
 ] as const;
 
-type ExportRow = Record<(typeof EXPORT_COLUMNS)[number], string | number | null>;
+export const ATTRIBUTE_COLUMN_PREFIX = "attr:";
+
+type ExportRow = Record<string, string | number | null>;
+export type ExportTable = { columns: string[]; rows: ExportRow[] };
 
 const euros = (c: number | null) => (c == null ? null : (c / 100).toFixed(2));
 const isoDate = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
 
-export async function exportRows(userId: string): Promise<ExportRow[]> {
-  const items = await prisma.collectionItem.findMany({
-    where: { userId },
-    include: { product: { include: { platform: true } } },
-    orderBy: [{ product: { platform: { sortOrder: "asc" } } }, { product: { title: "asc" } }],
-  });
-  return items.map((i) => ({
+export async function exportTable(userId: string): Promise<ExportTable> {
+  const [items, attributes] = await Promise.all([
+    prisma.collectionItem.findMany({
+      where: { userId },
+      include: { product: { include: { platform: true } }, attributeValues: true },
+      orderBy: [{ product: { platform: { sortOrder: "asc" } } }, { product: { title: "asc" } }],
+    }),
+    listAttributes(userId),
+  ]);
+  const attrColumns = attributes.map((a) => `${ATTRIBUTE_COLUMN_PREFIX}${a.label}`);
+  const rows = items.map((i) => ({
     title: i.product.title,
     platform: i.product.platform.slug,
     kind: i.product.kind,
@@ -48,11 +58,37 @@ export async function exportRows(userId: string): Promise<ExportRow[]> {
     publisher: i.product.publisher,
     genres: i.product.genres.join("|"),
     cover_url: i.product.coverUrl,
+    ...Object.fromEntries(
+      attributes.map((a, k) => {
+        const v = i.attributeValues.find((x) => x.attributeId === a.id)?.value ?? null;
+        return [attrColumns[k], a.type === "BOOLEAN" && v === "true" ? "oui" : v];
+      })
+    ),
   }));
+  return { columns: [...EXPORT_COLUMNS, ...attrColumns], rows };
 }
 
-export function rowsToCsv(rows: ExportRow[]): string {
-  return toCsv([...EXPORT_COLUMNS], rows.map((r) => EXPORT_COLUMNS.map((c) => r[c])));
+export function tableToCsv({ columns, rows }: ExportTable): string {
+  return toCsv(columns, rows.map((r) => columns.map((c) => r[c] ?? null)));
+}
+
+/** Colonnes "attr:<nom>" d'une ligne importée -> valeurs normalisées, ou message d'erreur. */
+function importAttributeValues(entry: unknown, byLabel: Map<string, AttributeDef>) {
+  const values = new Map<string, string | null>();
+  if (!entry || typeof entry !== "object") return { values };
+  for (const [key, raw] of Object.entries(entry)) {
+    if (!key.toLowerCase().startsWith(ATTRIBUTE_COLUMN_PREFIX)) continue;
+    const label = key.slice(ATTRIBUTE_COLUMN_PREFIX.length).trim().toLowerCase();
+    const attr = byLabel.get(label);
+    if (!attr) {
+      if (raw == null || String(raw).trim() === "") continue;
+      return { values, error: `caractéristique inconnue « ${label} » (à créer dans Plus → Caractéristiques)` };
+    }
+    const v = normalizeValue(attr, raw);
+    if (v !== null && typeof v === "object") return { values, error: v.error };
+    values.set(attr.id, v);
+  }
+  return { values };
 }
 
 // ---------- Import ----------
@@ -110,6 +146,8 @@ export function parseImportFile(name: string, text: string): unknown[] {
 
 export async function importRows(userId: string, raw: unknown[]): Promise<ImportReport> {
   const platforms = await prisma.platform.findMany();
+  const attributes = await listAttributes(userId);
+  const byLabel = new Map(attributes.map((a) => [a.label.toLowerCase(), a]));
   const bySlug = new Map(platforms.flatMap((p) => [[p.slug, p], [p.shortName.toLowerCase(), p]]));
   const report: ImportReport = { imported: 0, errors: [] };
 
@@ -122,6 +160,11 @@ export async function importRows(userId: string, raw: unknown[]): Promise<Import
       continue;
     }
     const r = parsed.data;
+    const attrs = importAttributeValues(entry, byLabel);
+    if (attrs.error) {
+      report.errors.push({ line, message: attrs.error });
+      continue;
+    }
     const platform = bySlug.get(r.platform.toLowerCase());
     if (!platform) {
       report.errors.push({ line, message: `plateforme inconnue « ${r.platform} »` });
@@ -138,7 +181,7 @@ export async function importRows(userId: string, raw: unknown[]): Promise<Import
       publisher: r.publisher,
       genres: Array.isArray(r.genres) ? r.genres : r.genres?.split("|").map((g) => g.trim()).filter(Boolean),
     });
-    await prisma.collectionItem.create({
+    const item = await prisma.collectionItem.create({
       data: {
         userId,
         productId: product.id,
@@ -156,6 +199,7 @@ export async function importRows(userId: string, raw: unknown[]): Promise<Import
         notes: r.notes,
       },
     });
+    await saveAttributeValues(item.id, attrs.values);
     report.imported += 1;
   }
   return report;

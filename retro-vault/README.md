@@ -57,6 +57,8 @@ src/app/
   (app)/collection/              Liste + filtres, fiche, ajout, édition, server actions
   (app)/wishlist/                Wishlist avec prix cible vs cote
   (app)/settings/                Export / import, sources de données, déconnexion
+  (app)/settings/platforms/      Paramétrage des consoles (ajout, ordre, masquage)
+  (app)/settings/attributes/     Caractéristiques personnalisées (avec notice, édition…)
   (app)/share/                   Résumé visuel partageable (PNG 1080×1350 via next/og)
   api/igdb/search                Auto-complétion
   api/export                     Téléchargement CSV / JSON
@@ -71,6 +73,9 @@ src/app/
 - **Données du collectionneur**, toutes rattachées à `User.id` : `CollectionItem` (région, format,
   état boîte/notice/support en Mauvais→Neuf + note /10 facultative, date et prix d'achat, valeur
   manuelle), `ItemPhoto`, `WishlistItem` (format visé, prix cible, priorité).
+- **Caractéristiques personnalisées** : `ItemAttribute` (oui/non, liste de choix, texte, nombre ;
+  types de produit concernés) et `ItemAttributeValue` (valeur par exemplaire). Exportées et importées
+  dans des colonnes `attr:<nom>`. Elles n'entrent pas dans le calcul de la valeur.
 - Montants en **centimes d'euro** (Int). Valeurs, plus-values et variations sont **calculées à la
   lecture**, jamais stockées : changer la formule d'état réévalue tout l'historique.
 

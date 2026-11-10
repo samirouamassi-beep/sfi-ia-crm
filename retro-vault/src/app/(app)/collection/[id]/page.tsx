@@ -8,6 +8,7 @@ import { loadPriceIndex } from "@/lib/collection";
 import { prisma } from "@/lib/db";
 import { formatCents, formatDelta, formatPercent } from "@/lib/money";
 import { basePriceCents, conditionFactor, estimateValueCents, gain } from "@/lib/valuation";
+import { formatValue } from "@/lib/attributes";
 import { deleteItem, refreshItemPrice, removePhoto } from "../actions";
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "UTC" });
@@ -23,7 +24,11 @@ export default async function ItemPage({
   const userId = await requireUserId();
   const item = await prisma.collectionItem.findFirst({
     where: { id, userId },
-    include: { product: { include: { platform: true } }, photos: { orderBy: { position: "asc" } } },
+    include: {
+      product: { include: { platform: true } },
+      photos: { orderBy: { position: "asc" } },
+      attributeValues: { include: { attribute: true }, orderBy: { attribute: { position: "asc" } } },
+    },
   });
   if (!item) notFound();
 
@@ -134,6 +139,12 @@ export default async function ItemPage({
             <div key={c.label} className="flex justify-between gap-4">
               <dt className="text-ink-3">{c.label}</dt>
               <dd>{[c.grade && GRADE_LABELS[c.grade], c.score != null && `${c.score}/10`].filter(Boolean).join(" · ") || "Non renseigné"}</dd>
+            </div>
+          ))}
+          {item.attributeValues.map((v) => (
+            <div key={v.attributeId} className="flex justify-between gap-4">
+              <dt className="text-ink-3">{v.attribute.label}</dt>
+              <dd>{formatValue(v.attribute, v.value)}</dd>
             </div>
           ))}
           <div className="flex justify-between gap-4">

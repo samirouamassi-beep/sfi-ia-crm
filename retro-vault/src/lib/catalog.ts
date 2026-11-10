@@ -2,13 +2,14 @@
 // Importable côté client : ne dépend que des enums générés, pas du client Prisma.
 
 import {
+  AttributeType,
   Completeness,
   Grade,
   ProductKind,
   Region,
 } from "@/generated/prisma/enums";
 
-export { Completeness, Grade, ProductKind, Region };
+export { AttributeType, Completeness, Grade, ProductKind, Region };
 
 export const COMPLETENESS_LABELS: Record<Completeness, { label: string; hint: string }> = {
   LOOSE: { label: "Loose", hint: "Cartouche / disque seul" },
@@ -35,6 +36,15 @@ export const KIND_LABELS: Record<ProductKind, string> = {
   CONSOLE: "Console",
   ACCESSORY: "Accessoire",
 };
+
+export const ATTRIBUTE_TYPE_LABELS: Record<AttributeType, { label: string; hint: string }> = {
+  BOOLEAN: { label: "Oui / non", hint: "Case à cocher : « Avec notice », « Avec cale »…" },
+  SELECT: { label: "Liste de choix", hint: "Une valeur parmi une liste : Édition, Langue…" },
+  TEXT: { label: "Texte", hint: "Texte libre : n° de série, provenance…" },
+  NUMBER: { label: "Nombre", hint: "Nombre de manettes, de jeux inclus…" },
+};
+
+export const ATTRIBUTE_TYPE_VALUES = Object.keys(ATTRIBUTE_TYPE_LABELS) as AttributeType[];
 
 export const COMPLETENESS_VALUES = Object.keys(COMPLETENESS_LABELS) as Completeness[];
 export const GRADE_VALUES = Object.keys(GRADE_LABELS) as Grade[];
