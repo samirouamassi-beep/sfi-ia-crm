@@ -3,34 +3,16 @@ import { Badge, Card, CardTitle, Cover, EmptyState, PageHeader } from "@/compone
 import { WishForm } from "@/components/wish-form";
 import { requireUserId } from "@/lib/auth";
 import { COMPLETENESS_LABELS, REGION_LABELS } from "@/lib/catalog";
-import { loadPriceIndex } from "@/lib/collection";
-import { prisma } from "@/lib/db";
 import { formatCents } from "@/lib/money";
 import { listPlatforms } from "@/lib/platforms";
-import { basePriceCents } from "@/lib/valuation";
+import { PRIORITY_LABELS as PRIORITY, loadWishlist } from "@/lib/wishlist";
 import { addWish, removeWish } from "./actions";
 
 export const metadata = { title: "Wishlist" };
 
-const PRIORITY = { 1: "Haute", 2: "Normale", 3: "Basse" } as Record<number, string>;
-
 export default async function WishlistPage() {
   const userId = await requireUserId();
-  const [wishes, platforms] = await Promise.all([
-    prisma.wishlistItem.findMany({
-      where: { userId },
-      include: { product: { include: { platform: true } } },
-      orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
-    }),
-    listPlatforms(),
-  ]);
-  const index = await loadPriceIndex(wishes.map((w) => w.productId));
-  const now = new Date();
-  const rows = wishes.map((w) => {
-    const quote = index.quoteAt(w.productId, w.region, now);
-    const market = quote ? basePriceCents(quote, w.completeness) : null;
-    return { ...w, market, deal: market != null && w.targetPriceCents != null && market <= w.targetPriceCents };
-  });
+  const [rows, platforms] = await Promise.all([loadWishlist(userId), listPlatforms()]);
   const budget = rows.reduce((s, r) => s + (r.targetPriceCents ?? r.market ?? 0), 0);
 
   return (
