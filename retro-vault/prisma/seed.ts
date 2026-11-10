@@ -42,7 +42,9 @@ const DEMO: Demo[] = [
 
 async function seedPlatforms() {
   for (const [i, p] of PLATFORMS.entries()) {
-    await prisma.platform.upsert({ where: { slug: p.slug }, create: { ...p, sortOrder: i }, update: { ...p, sortOrder: i } });
+    // Création seulement : les plateformes se modifient ensuite dans l'appli (Plus → Consoles),
+    // le seed relancé à chaque déploiement ne doit pas écraser ces réglages.
+    await prisma.platform.upsert({ where: { slug: p.slug }, create: { ...p, sortOrder: i }, update: {} });
   }
   console.log(`✓ ${PLATFORMS.length} plateformes`);
 }

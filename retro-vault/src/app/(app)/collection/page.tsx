@@ -15,7 +15,7 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
 
   const totalValue = rows.reduce((s, r) => s + (r.valueCents ?? r.purchaseCents ?? 0), 0);
   const totalPurchase = rows.reduce((s, r) => s + (r.purchaseCents ?? 0), 0);
-  const filtered = Boolean(filters.q || filters.platform || filters.completeness || filters.region || filters.kind || filters.genre);
+  const filtered = Boolean(filters.q || filters.platform || filters.completeness || filters.region || filters.kind || filters.genre || filters.attr);
 
   return (
     <>
@@ -34,6 +34,9 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
           { name: "region", label: "Région", value: filters.region, options: REGION_VALUES.map((r) => ({ value: r, label: REGION_LABELS[r] })) },
           { name: "kind", label: "Type", value: filters.kind, options: KIND_VALUES.map((k) => ({ value: k, label: KIND_LABELS[k] })) },
           { name: "genre", label: "Genre", value: filters.genre, options: options.genres.map((g) => ({ value: g, label: g })) },
+          ...(options.flags.length > 0
+            ? [{ name: "attr", label: "Avec…", value: filters.attr, options: options.flags.map((a) => ({ value: a.id, label: a.label })) }]
+            : []),
           { name: "sort", label: "Trier", value: filters.sort, options: Object.entries(SORTS).map(([value, label]) => ({ value, label: `↕ ${label}` })) },
         ]}
       />

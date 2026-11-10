@@ -17,6 +17,21 @@ export default function SettingsPage() {
       <PageHeader title="Plus" />
 
       <Card>
+        <CardTitle>Paramétrage</CardTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <ButtonLink href="/settings/platforms" variant="secondary">
+            🎮 Consoles
+          </ButtonLink>
+          <ButtonLink href="/settings/attributes" variant="secondary">
+            🏷️ Caractéristiques
+          </ButtonLink>
+        </div>
+        <p className="mt-2 text-xs text-ink-3">
+          Ajoutez ou masquez des consoles, et créez vos propres champs d&apos;exemplaire (avec notice, avec cale, édition…).
+        </p>
+      </Card>
+
+      <Card>
         <CardTitle>Résumé partageable</CardTitle>
         <p className="mb-3 text-sm text-ink-3">Une carte image de votre collection (stats et pièces maîtresses) à partager.</p>
         <ButtonLink href="/share" className="w-full">
@@ -41,7 +56,8 @@ export default function SettingsPage() {
         <p className="mb-3 text-xs text-ink-3">
           CSV (virgule ou point-virgule) ou JSON, mêmes colonnes que l&apos;export. Obligatoires : <code>title</code>,{" "}
           <code>platform</code> (ex. <code>snes</code>), <code>completeness</code> (<code>LOOSE</code> / <code>CIB</code> /{" "}
-          <code>SEALED</code>). Les exemplaires sont ajoutés, jamais remplacés.
+          <code>SEALED</code>). Caractéristiques : une colonne <code>attr:Nom</code> chacune (ex.{" "}
+          <code>attr:Avec notice</code> = <code>oui</code>). Les exemplaires sont ajoutés, jamais remplacés.
         </p>
         <details className="mb-3 text-xs text-ink-3">
           <summary className="cursor-pointer">Toutes les colonnes</summary>

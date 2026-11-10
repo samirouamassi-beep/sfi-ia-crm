@@ -3,6 +3,7 @@
 // Formulaire exemplaire (ajout / édition) : recherche IGDB, format Loose/CIB/Neuf,
 // état des composants, achat, photos.
 
+import Link from "next/link";
 import { useActionState, useEffect, useId, useState } from "react";
 import {
   COMPLETENESS_LABELS,
@@ -19,6 +20,7 @@ import {
   type Region,
 } from "@/lib/catalog";
 import type { FormState } from "@/lib/item-form";
+import { ATTRIBUTE_FIELD_PREFIX, appliesTo, type AttributeDef } from "@/lib/attributes";
 import type { GameSearchResponse, GameSuggestion } from "@/app/api/igdb/search/route";
 import { Button, Cover, Field, Input, Select, cn, inputClass } from "./ui";
 
@@ -41,6 +43,8 @@ export type ItemFormInitial = {
   purchase: string; // euros
   manualValue: string;
   notes: string;
+  /** Valeurs des caractéristiques personnalisées, par id de caractéristique */
+  attributes: Record<string, string>;
 };
 
 export const EMPTY_ITEM: ItemFormInitial = {
@@ -60,16 +64,19 @@ export const EMPTY_ITEM: ItemFormInitial = {
   purchase: "",
   manualValue: "",
   notes: "",
+  attributes: {},
 };
 
 type Props = {
   platforms: PlatformOption[];
+  /** Caractéristiques actives (Plus → Caractéristiques) */
+  attributes: AttributeDef[];
   initial?: ItemFormInitial;
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   submitLabel: string;
 };
 
-export function ItemForm({ platforms, initial = EMPTY_ITEM, action, submitLabel }: Props) {
+export function ItemForm({ platforms, attributes, initial = EMPTY_ITEM, action, submitLabel }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [kind, setKind] = useState(initial.kind);
   const [platformId, setPlatformId] = useState(initial.platformId);
@@ -184,6 +191,8 @@ export function ItemForm({ platforms, initial = EMPTY_ITEM, action, submitLabel 
           <p className="text-xs text-ink-3">La note /10 (facultative) affine l&apos;estimation et prime sur l&apos;état.</p>
         </div>
       </fieldset>
+
+      <AttributeFields attributes={attributes.filter((a) => appliesTo(a, kind))} values={initial.attributes} errors={errors} />
 
       {/* 3. Achat */}
       <fieldset className="grid grid-cols-2 gap-3">
@@ -476,5 +485,70 @@ function PhotoPicker() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Caractéristiques personnalisées : cases à cocher regroupées, puis listes / textes / nombres. */
+function AttributeFields({
+  attributes,
+  values,
+  errors,
+}: {
+  attributes: AttributeDef[];
+  values: Record<string, string>;
+  errors: Record<string, string>;
+}) {
+  if (attributes.length === 0) return null;
+  const checks = attributes.filter((a) => a.type === "BOOLEAN");
+  const others = attributes.filter((a) => a.type !== "BOOLEAN");
+  const name = (a: AttributeDef) => `${ATTRIBUTE_FIELD_PREFIX}${a.id}`;
+
+  return (
+    <fieldset className="space-y-3 rounded-2xl border border-line p-3">
+      <legend className="px-1 text-sm font-medium text-ink-2">Caractéristiques</legend>
+      {checks.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {checks.map((a) => (
+            <label
+              key={a.id}
+              className="flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent"
+            >
+              <input type="checkbox" name={name(a)} defaultChecked={values[a.id] === "true"} className="accent-[var(--color-accent-strong)]" />
+              {a.label}
+            </label>
+          ))}
+        </div>
+      )}
+      {others.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          {others.map((a) => (
+            <Field key={a.id} label={a.label} htmlFor={name(a)}>
+              {a.type === "SELECT" ? (
+                <Select id={name(a)} name={name(a)} defaultValue={values[a.id] ?? ""}>
+                  <option value="">—</option>
+                  {a.options.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  id={name(a)}
+                  name={name(a)}
+                  defaultValue={values[a.id] ?? ""}
+                  inputMode={a.type === "NUMBER" ? "decimal" : undefined}
+                  maxLength={a.type === "TEXT" ? 200 : undefined}
+                />
+              )}
+              <FieldError message={errors[name(a)]} />
+            </Field>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-ink-3">
+        Liste modifiable dans <Link href="/settings/attributes" className="text-accent">Plus → Caractéristiques</Link>.
+      </p>
+    </fieldset>
   );
 }

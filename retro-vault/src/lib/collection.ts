@@ -32,6 +32,8 @@ export type CollectionFilters = {
   region: Region | null;
   kind: ProductKind | null;
   genre: string | null;
+  /** Caractéristique oui/non cochée (id), ex. « Avec notice » */
+  attr: string | null;
   sort: SortKey;
 };
 
@@ -47,6 +49,7 @@ export function parseFilters(params: RawParams): CollectionFilters {
     region: isEnumValue(REGION_VALUES, one(params.region)) ? (one(params.region) as Region) : null,
     kind: isEnumValue(KIND_VALUES, one(params.kind)) ? (one(params.kind) as ProductKind) : null,
     genre: one(params.genre) || null,
+    attr: one(params.attr) || null,
     sort: sort in SORTS ? (sort as SortKey) : "added",
   };
 }
@@ -80,6 +83,7 @@ export async function loadCollection(userId: string, f: CollectionFilters): Prom
     userId,
     ...(f.completeness && { completeness: f.completeness }),
     ...(f.region && { region: f.region }),
+    ...(f.attr && { attributeValues: { some: { attributeId: f.attr, value: "true" } } }),
     product: {
       ...(f.q && { title: { contains: f.q, mode: "insensitive" } }),
       ...(f.platform && { platform: { slug: f.platform } }),
@@ -112,10 +116,17 @@ export async function loadCollection(userId: string, f: CollectionFilters): Prom
 
 /** Valeurs proposées dans les filtres (plateformes et genres présents dans la collection). */
 export async function loadFilterOptions(userId: string) {
-  const products = await prisma.product.findMany({
-    where: { items: { some: { userId } } },
-    select: { genres: true, platform: { select: { slug: true, shortName: true, sortOrder: true } } },
-  });
+  const [products, flags] = await Promise.all([
+    prisma.product.findMany({
+      where: { items: { some: { userId } } },
+      select: { genres: true, platform: { select: { slug: true, shortName: true, sortOrder: true } } },
+    }),
+    prisma.itemAttribute.findMany({
+      where: { userId, type: "BOOLEAN" },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      select: { id: true, label: true },
+    }),
+  ]);
   const platforms = new Map<string, { slug: string; shortName: string; sortOrder: number }>();
   const genres = new Set<string>();
   for (const p of products) {
@@ -125,5 +136,6 @@ export async function loadFilterOptions(userId: string) {
   return {
     platforms: [...platforms.values()].sort((a, b) => a.sortOrder - b.sortOrder),
     genres: [...genres].sort((a, b) => a.localeCompare(b, "fr")),
+    flags,
   };
 }

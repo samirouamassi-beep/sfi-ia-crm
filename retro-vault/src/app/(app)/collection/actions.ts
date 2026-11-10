@@ -9,6 +9,8 @@ import { parseItemForm, type FormState, type ItemFormValues } from "@/lib/item-f
 import { findOrCreateProduct } from "@/lib/products";
 import { refreshPrice } from "@/lib/pricing";
 import { PhotoError, deletePhoto, uploadPhoto } from "@/lib/storage";
+import { parseAttributeFields } from "@/lib/attributes";
+import { listAttributes, saveAttributeValues } from "@/lib/attributes-store";
 
 const MAX_PHOTOS_PER_SUBMIT = 4;
 
@@ -27,6 +29,24 @@ function itemData(v: ItemFormValues) {
     manualValueCents: v.manualValue,
     notes: v.notes ?? null,
   };
+}
+
+/** Formulaire complet : champs fixes + caractéristiques personnalisées actives. */
+async function parseForm(userId: string, formData: FormData) {
+  const parsed = parseItemForm(formData);
+  const attributes = await listAttributes(userId, { activeOnly: true });
+  const kind = parsed.data?.kind ?? "GAME";
+  const attrs = parseAttributeFields(formData, attributes, kind);
+  const attrErrors = Object.keys(attrs.errors).length > 0;
+  if (!parsed.data || attrErrors) {
+    return {
+      state: {
+        error: "Vérifiez les champs signalés.",
+        fieldErrors: { ...(parsed.state?.fieldErrors ?? {}), ...attrs.errors },
+      } satisfies FormState,
+    } as const;
+  }
+  return { data: parsed.data, attributeValues: attrs.values } as const;
 }
 
 async function productFor(v: ItemFormValues) {
@@ -73,13 +93,14 @@ function refreshPriceLater(productId: string, region: ItemFormValues["region"]) 
 
 export async function createItem(_state: FormState, formData: FormData): Promise<FormState> {
   const userId = await requireUserId();
-  const parsed = parseItemForm(formData);
+  const parsed = await parseForm(userId, formData);
   if (!parsed.data) return parsed.state;
 
   const product = await productFor(parsed.data);
   const item = await prisma.collectionItem.create({
     data: { userId, productId: product.id, ...itemData(parsed.data) },
   });
+  await saveAttributeValues(item.id, parsed.attributeValues);
   const photoWarning = await savePhotos(userId, item.id, formData);
   refreshPriceLater(product.id, item.region);
 
@@ -89,7 +110,7 @@ export async function createItem(_state: FormState, formData: FormData): Promise
 
 export async function updateItem(itemId: string, _state: FormState, formData: FormData): Promise<FormState> {
   const userId = await requireUserId();
-  const parsed = parseItemForm(formData);
+  const parsed = await parseForm(userId, formData);
   if (!parsed.data) return parsed.state;
 
   const existing = await prisma.collectionItem.findFirst({ where: { id: itemId, userId } });
@@ -100,6 +121,7 @@ export async function updateItem(itemId: string, _state: FormState, formData: Fo
     where: { id: itemId },
     data: { productId: product.id, ...itemData(parsed.data) },
   });
+  await saveAttributeValues(itemId, parsed.attributeValues);
   const photoWarning = await savePhotos(userId, itemId, formData);
   if (product.id !== existing.productId || parsed.data.region !== existing.region) {
     refreshPriceLater(product.id, parsed.data.region);

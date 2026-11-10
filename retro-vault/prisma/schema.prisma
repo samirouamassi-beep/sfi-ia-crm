@@ -54,8 +54,9 @@ model User {
   currency  String   @default("EUR")
   createdAt DateTime @default(now())
 
-  items    CollectionItem[]
-  wishlist WishlistItem[]
+  items      CollectionItem[]
+  wishlist   WishlistItem[]
+  attributes ItemAttribute[]
 }
 
 model Platform {
@@ -69,6 +70,8 @@ model Platform {
   /// Libellé de console côté PriceCharting ("Super Nintendo", "PAL Super Nintendo"...)
   priceChartingName String?
   sortOrder         Int     @default(0)
+  /// Masquée des listes de choix (une plateforme utilisée n'est jamais supprimée)
+  active            Boolean @default(true)
 
   products Product[]
 }
@@ -157,7 +160,8 @@ model CollectionItem {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  photos ItemPhoto[]
+  photos          ItemPhoto[]
+  attributeValues ItemAttributeValue[]
 
   @@index([userId])
   @@index([productId])
@@ -190,4 +194,45 @@ model WishlistItem {
 
   @@unique([userId, productId, region, completeness])
   @@index([userId])
+}
+
+/// Type d'une caractéristique personnalisée.
+enum AttributeType {
+  BOOLEAN // case à cocher : « Avec notice », « Avec cale »…
+  SELECT // liste de choix : « Édition » = Standard / Player's Choice / Collector
+  TEXT // texte libre : « N° de série »
+  NUMBER // nombre : « Nombre de manettes »
+}
+
+/// Caractéristique d'exemplaire définie par le collectionneur dans Plus → Caractéristiques.
+model ItemAttribute {
+  id        String        @id @default(cuid())
+  userId    String        @db.Uuid
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String
+  type      AttributeType
+  options   String[] // valeurs possibles (SELECT)
+  /// Types de produit concernés ; vide = tous
+  kinds     ProductKind[]
+  position  Int           @default(0)
+  /// Masquée du formulaire (les valeurs déjà saisies sont conservées)
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+
+  values ItemAttributeValue[]
+
+  @@unique([userId, label])
+  @@index([userId])
+}
+
+/// Valeur d'une caractéristique pour un exemplaire (stockée en texte : "true", "Collector", "2"…).
+model ItemAttributeValue {
+  itemId      String
+  item        CollectionItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  attributeId String
+  attribute   ItemAttribute  @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value       String
+
+  @@id([itemId, attributeId])
+  @@index([attributeId])
 }
