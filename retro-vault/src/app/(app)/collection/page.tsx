@@ -10,7 +10,13 @@ export const metadata = { title: "Collection" };
 
 export default async function CollectionPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const userId = await requireUserId();
-  const filters = parseFilters(await searchParams);
+  const params = await searchParams;
+  const filters = parseFilters(params);
+  // Les exports reprennent les filtres et le tri affichés.
+  const query = new URLSearchParams(
+    Object.entries(params).flatMap(([k, v]) => (typeof v === "string" && v !== "" ? [[k, v]] : []))
+  ).toString();
+  const exportHref = (format: "xlsx" | "pdf") => `/api/export?format=${format}${query ? `&${query}` : ""}`;
   const [rows, options] = await Promise.all([loadCollection(userId, filters), loadFilterOptions(userId)]);
 
   const totalValue = rows.reduce((s, r) => s + (r.valueCents ?? r.purchaseCents ?? 0), 0);
@@ -22,7 +28,12 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
       <PageHeader
         title="Collection"
         subtitle={`${rows.length} exemplaire${rows.length > 1 ? "s" : ""} · ${formatCents(totalValue, { round: true })} estimés · ${formatCents(totalPurchase, { round: true })} investis`}
-        action={<ButtonLink href="/collection/new" className="hidden md:inline-flex">＋ Ajouter</ButtonLink>}
+        action={
+          // Mobile : l'ajout passe par l'onglet central de la barre de navigation.
+          <div className="hidden md:block">
+            <ButtonLink href="/collection/new">＋ Ajouter</ButtonLink>
+          </div>
+        }
       />
 
       <FilterBar
@@ -40,6 +51,18 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
           { name: "sort", label: "Trier", value: filters.sort, options: Object.entries(SORTS).map(([value, label]) => ({ value, label: `↕ ${label}` })) },
         ]}
       />
+
+      {rows.length > 0 && (
+        <div className="-mt-2 mb-3 flex items-center justify-end gap-2 text-xs text-ink-3">
+          <span>Exporter {filtered ? "cette sélection" : "la liste"} :</span>
+          <a href={exportHref("xlsx")} download className="rounded-full border border-line px-3 py-1.5 text-ink-2 hover:border-ink-3">
+            Excel
+          </a>
+          <a href={exportHref("pdf")} download className="rounded-full border border-line px-3 py-1.5 text-ink-2 hover:border-ink-3">
+            PDF
+          </a>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         filtered ? (

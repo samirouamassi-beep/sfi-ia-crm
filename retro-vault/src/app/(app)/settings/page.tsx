@@ -40,7 +40,20 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <CardTitle>Exporter</CardTitle>
+        <CardTitle>Télécharger mes données</CardTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <a href="/api/export?format=xlsx" download className={exportLink}>
+            📊 Excel
+          </a>
+          <a href="/api/export?format=pdf" download className={exportLink}>
+            📄 PDF
+          </a>
+        </div>
+        <p className="mt-2 text-xs text-ink-3">
+          Collection valorisée (état, caractéristiques, achat, valeur, plus-value), totaux par console et wishlist.
+          Pour n&apos;exporter qu&apos;une partie, filtrez la liste de la collection puis utilisez ses boutons d&apos;export.
+        </p>
+        <p className="mb-2 mt-4 text-xs font-medium text-ink-2">Sauvegarde réimportable</p>
         <div className="grid grid-cols-2 gap-2">
           <a href="/api/export?format=csv" download className={exportLink}>
             CSV

@@ -69,6 +69,7 @@ export async function loadPriceIndex(productIds: string[]): Promise<PriceIndex> 
 const itemInclude = {
   product: { include: { platform: true } },
   photos: { orderBy: { position: "asc" }, take: 1 },
+  attributeValues: true,
 } satisfies Prisma.CollectionItemInclude;
 
 export type CollectionRow = Prisma.CollectionItemGetPayload<{ include: typeof itemInclude }> & {

@@ -50,7 +50,8 @@ src/lib/
   igdb.ts        Client IGDB (jeton Twitch mis en cache)
   pricing/       Interface PriceProvider + implémentation PriceCharting + relevé quotidien
   storage.ts     Photos : Supabase Storage (REST) ou disque local en dev
-  transfer.ts    Export / import CSV & JSON
+  transfer.ts    Export / import CSV & JSON (sauvegarde réimportable)
+  report.ts      Données des exports lisibles ; export-excel.ts (exceljs), export-pdf.ts (pdfkit)
   auth.ts, session.ts  Session V0 (mot de passe unique → compte propriétaire)
 src/app/
   (app)/page.tsx                 Tableau de bord financier
@@ -61,7 +62,7 @@ src/app/
   (app)/settings/attributes/     Caractéristiques personnalisées (avec notice, édition…)
   (app)/share/                   Résumé visuel partageable (PNG 1080×1350 via next/og)
   api/igdb/search                Auto-complétion
-  api/export                     Téléchargement CSV / JSON
+  api/export                     Téléchargement Excel / PDF (filtres de la liste) et CSV / JSON (sauvegarde)
   api/prices/refresh             Cron des cotes
 ```
 
