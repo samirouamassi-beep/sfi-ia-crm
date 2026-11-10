@@ -38,6 +38,12 @@ export const KIND_LABELS: Record<ProductKind, string> = {
   ACCESSORY: "Accessoire",
 };
 
+export const KIND_PLURAL_LABELS: Record<ProductKind, string> = {
+  GAME: "Jeux",
+  CONSOLE: "Consoles",
+  ACCESSORY: "Accessoires",
+};
+
 export const ATTRIBUTE_TYPE_LABELS: Record<AttributeType, { label: string; hint: string }> = {
   BOOLEAN: { label: "Oui / non", hint: "Case à cocher : « Avec notice », « Avec cale »…" },
   SELECT: { label: "Liste de choix", hint: "Une valeur parmi une liste : Édition, Langue…" },

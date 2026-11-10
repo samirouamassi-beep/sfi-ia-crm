@@ -30,7 +30,8 @@ export type CollectionFilters = {
   platform: string | null; // slug
   completeness: Completeness | null;
   region: Region | null;
-  kind: ProductKind | null;
+  /** Types de produit cochés (jeux, consoles, accessoires) ; vide = tous */
+  kinds: ProductKind[];
   genre: string | null;
   /** Caractéristique oui/non cochée (id), ex. « Avec notice » */
   attr: string | null;
@@ -59,6 +60,15 @@ const STATUS_WHERE: Record<StatusFilter, Prisma.CollectionItemWhereInput> = {
 type RawParams = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
+/** `kind=CONSOLE,ACCESSORY` (cases cochées) ; tous cochés = pas de filtre. */
+function parseKinds(raw: string | string[] | undefined): ProductKind[] {
+  const values = (Array.isArray(raw) ? raw : raw ? [raw] : [])
+    .flatMap((v) => v.split(","))
+    .filter((v): v is ProductKind => isEnumValue(KIND_VALUES, v));
+  const unique = [...new Set(values)];
+  return unique.length === KIND_VALUES.length ? [] : unique;
+}
+
 export function parseFilters(params: RawParams): CollectionFilters {
   const sort = one(params.sort);
   return {
@@ -66,7 +76,7 @@ export function parseFilters(params: RawParams): CollectionFilters {
     platform: one(params.platform) || null,
     completeness: isEnumValue(COMPLETENESS_VALUES, one(params.completeness)) ? (one(params.completeness) as Completeness) : null,
     region: isEnumValue(REGION_VALUES, one(params.region)) ? (one(params.region) as Region) : null,
-    kind: isEnumValue(KIND_VALUES, one(params.kind)) ? (one(params.kind) as ProductKind) : null,
+    kinds: parseKinds(params.kind),
     genre: one(params.genre) || null,
     attr: one(params.attr) || null,
     accessory: one(params.accessory) || null,
@@ -114,7 +124,7 @@ export async function loadCollection(userId: string, f: CollectionFilters): Prom
     product: {
       ...(f.q && { title: { contains: f.q, mode: "insensitive" } }),
       ...(f.platform && { platform: { slug: f.platform } }),
-      ...(f.kind && { kind: f.kind }),
+      ...(f.kinds.length > 0 && { kind: { in: f.kinds } }),
       ...(f.genre && { genres: { has: f.genre } }),
       ...(f.accessory && { accessoryTypeId: f.accessory }),
     },

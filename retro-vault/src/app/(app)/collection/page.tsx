@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FilterBar } from "@/components/filter-bar";
 import { Badge, ButtonLink, Cover, EmptyState, PageHeader, Trend } from "@/components/ui";
 import { requireUserId } from "@/lib/auth";
-import { COMPLETENESS_LABELS, COMPLETENESS_VALUES, KIND_LABELS, KIND_VALUES, REGION_LABELS, REGION_VALUES } from "@/lib/catalog";
+import { COMPLETENESS_LABELS, COMPLETENESS_VALUES, KIND_PLURAL_LABELS, KIND_VALUES, REGION_LABELS, REGION_VALUES } from "@/lib/catalog";
 import { SORTS, STATUS_FILTERS, loadCollection, loadFilterOptions, parseFilters } from "@/lib/collection";
 import { formatCents, formatDelta, formatPercent } from "@/lib/money";
 
@@ -16,7 +16,7 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
   const totalValue = rows.reduce((s, r) => s + (r.valueCents ?? r.purchaseCents ?? 0), 0);
   const totalPurchase = rows.reduce((s, r) => s + (r.purchaseCents ?? 0), 0);
   const filtered = Boolean(
-    filters.q || filters.platform || filters.completeness || filters.region || filters.kind || filters.genre || filters.attr || filters.accessory || filters.status !== "owned"
+    filters.q || filters.platform || filters.completeness || filters.region || filters.kinds.length || filters.genre || filters.attr || filters.accessory || filters.status !== "owned"
   );
   const n = rows.length;
   const plural = n > 1 ? "s" : "";
@@ -41,12 +41,12 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
       <FilterBar
         action="/collection"
         q={filters.q}
+        toggles={{ name: "kind", label: "Afficher", values: filters.kinds, options: KIND_VALUES.map((k) => ({ value: k, label: KIND_PLURAL_LABELS[k] })) }}
         filters={[
           { name: "status", label: "Statut", value: filters.status === "owned" ? null : filters.status, options: Object.entries(STATUS_FILTERS).filter(([v]) => v !== "owned").map(([value, label]) => ({ value, label })) },
           { name: "platform", label: "Console", value: filters.platform, options: options.platforms.map((p) => ({ value: p.slug, label: p.shortName })) },
           { name: "completeness", label: "État", value: filters.completeness, options: COMPLETENESS_VALUES.map((c) => ({ value: c, label: COMPLETENESS_LABELS[c].label })) },
           { name: "region", label: "Région", value: filters.region, options: REGION_VALUES.map((r) => ({ value: r, label: REGION_LABELS[r] })) },
-          { name: "kind", label: "Type", value: filters.kind, options: KIND_VALUES.map((k) => ({ value: k, label: KIND_LABELS[k] })) },
           { name: "genre", label: "Genre", value: filters.genre, options: options.genres.map((g) => ({ value: g, label: g })) },
           ...(options.accessories.length > 0
             ? [{ name: "accessory", label: "Accessoire", value: filters.accessory, options: options.accessories.map((a) => ({ value: a.id, label: a.name })) }]
@@ -54,7 +54,7 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
           ...(options.flags.length > 0
             ? [{ name: "attr", label: "Avec…", value: filters.attr, options: options.flags.map((a) => ({ value: a.id, label: a.label })) }]
             : []),
-          { name: "sort", label: "Trier", value: filters.sort, options: Object.entries(SORTS).map(([value, label]) => ({ value, label: `↕ ${label}` })) },
+          { name: "sort", label: "Trier", value: filters.sort, omitWhen: "added", options: Object.entries(SORTS).map(([value, label]) => ({ value, label: `↕ ${label}` })) },
         ]}
       />
 
