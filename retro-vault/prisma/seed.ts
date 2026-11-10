@@ -8,7 +8,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import type { Completeness, Grade, Region } from "../src/generated/prisma/enums";
-import { PLATFORMS } from "../src/lib/catalog";
+import { DEFAULT_ACCESSORY_TYPES, PLATFORMS } from "../src/lib/catalog";
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.RETROVAULT_DATABASE_URL ?? process.env.DATABASE_URL }) });
 
@@ -47,6 +47,13 @@ async function seedPlatforms() {
     await prisma.platform.upsert({ where: { slug: p.slug }, create: { ...p, sortOrder: i }, update: {} });
   }
   console.log(`✓ ${PLATFORMS.length} plateformes`);
+
+  // Types d'accessoires : seulement au premier déploiement (table vide), pour ne pas recréer
+  // ceux que le collectionneur a supprimés.
+  if ((await prisma.accessoryType.count()) === 0) {
+    await prisma.accessoryType.createMany({ data: DEFAULT_ACCESSORY_TYPES.map((name, position) => ({ name, position })) });
+    console.log(`✓ ${DEFAULT_ACCESSORY_TYPES.length} types d'accessoires`);
+  }
 }
 
 async function seedDemo() {

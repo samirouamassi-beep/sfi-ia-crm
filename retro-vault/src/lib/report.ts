@@ -5,7 +5,7 @@ import "server-only";
 import { prisma } from "./db";
 import { COMPLETENESS_LABELS, GRADE_LABELS, KIND_LABELS, REGION_LABELS, type Grade } from "./catalog";
 import { listAttributes } from "./attributes-store";
-import { SORTS, loadCollection, parseFilters, type CollectionFilters, type CollectionRow } from "./collection";
+import { SORTS, STATUS_FILTERS, loadCollection, parseFilters, type CollectionFilters, type CollectionRow } from "./collection";
 import { loadWishlist, type WishRow } from "./wishlist";
 import type { AttributeDef } from "./attributes";
 
@@ -21,10 +21,12 @@ export type Report = {
   byPlatform: PlatformTotal[];
   /** Incluse seulement pour un export de toute la collection */
   wishlist: WishRow[] | null;
+  /** Exemplaires vendus (export de toute la collection) */
+  sales: CollectionRow[] | null;
 };
 
 function isFiltered(f: CollectionFilters) {
-  return Boolean(f.q || f.platform || f.completeness || f.region || f.kind || f.genre || f.attr);
+  return Boolean(f.q || f.platform || f.completeness || f.region || f.kind || f.genre || f.attr || f.accessory || f.status !== "owned");
 }
 
 async function describeFilters(f: CollectionFilters, attributes: AttributeDef[]): Promise<string> {
@@ -39,6 +41,11 @@ async function describeFilters(f: CollectionFilters, attributes: AttributeDef[])
   if (f.completeness) parts.push(`format : ${COMPLETENESS_LABELS[f.completeness].label}`);
   if (f.genre) parts.push(`genre : ${f.genre}`);
   if (f.attr) parts.push(`avec : ${attributes.find((a) => a.id === f.attr)?.label ?? "?"}`);
+  if (f.accessory) {
+    const t = await prisma.accessoryType.findUnique({ where: { id: f.accessory }, select: { name: true } });
+    parts.push(`accessoire : ${t?.name ?? "?"}`);
+  }
+  if (f.status !== "owned") parts.push(STATUS_FILTERS[f.status].toLowerCase());
   return parts.join(" · ");
 }
 
@@ -73,6 +80,7 @@ export async function loadReport(userId: string, params: Record<string, string |
     totals: { count: rows.length, investedCents, valueCents, unpriced },
     byPlatform: [...byPlatform.values()].sort((a, b) => b.valueCents - a.valueCents),
     wishlist: filtered ? null : await loadWishlist(userId),
+    sales: filtered ? null : await loadCollection(userId, { ...filters, status: "sold", sort: "title" }),
   };
 }
 

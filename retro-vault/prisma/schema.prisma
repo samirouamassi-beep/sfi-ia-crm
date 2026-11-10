@@ -39,6 +39,12 @@ enum Completeness {
   SEALED // neuf sous blister
 }
 
+enum ItemStatus {
+  OWNED // en collection
+  FOR_SALE // en collection, mis en vente
+  SOLD // vendu
+}
+
 /// État d'un composant (boîte, notice, support).
 enum Grade {
   POOR // Mauvais
@@ -78,20 +84,23 @@ model Platform {
 
 /// Fiche de référence d'un jeu / d'une console / d'un accessoire, sur une plateforme donnée.
 model Product {
-  id          String      @id @default(cuid())
-  kind        ProductKind @default(GAME)
-  title       String
-  platformId  String
-  platform    Platform    @relation(fields: [platformId], references: [id])
-  igdbId      Int?
-  coverUrl    String?
-  releaseYear Int?
-  developer   String?
-  publisher   String?
-  genres      String[]
-  summary     String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id              String         @id @default(cuid())
+  kind            ProductKind    @default(GAME)
+  title           String
+  platformId      String
+  platform        Platform       @relation(fields: [platformId], references: [id])
+  igdbId          Int?
+  coverUrl        String?
+  releaseYear     Int?
+  developer       String?
+  publisher       String?
+  genres          String[]
+  summary         String?
+  /// Accessoires : type paramétrable (câble, caméra…), voir AccessoryType
+  accessoryTypeId String?
+  accessoryType   AccessoryType? @relation(fields: [accessoryTypeId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   prices     PriceSnapshot[]
   priceLinks PriceSourceLink[]
@@ -157,6 +166,13 @@ model CollectionItem {
   /// Valeur saisie à la main : prime sur la cote automatique (pièce rare, variante...)
   manualValueCents Int?
   notes            String?
+  /// Vente : un exemplaire vendu sort de la valeur de la collection à sa date de vente
+  status           ItemStatus   @default(OWNED)
+  askingPriceCents Int? // prix demandé (à vendre)
+  soldAt           DateTime?    @db.Date
+  salePriceCents   Int?
+  saleFeesCents    Int? // commission plateforme, port à la charge du vendeur…
+  saleChannel      String? // eBay, Leboncoin, Vinted, brocante…
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -235,4 +251,16 @@ model ItemAttributeValue {
 
   @@id([itemId, attributeId])
   @@index([attributeId])
+}
+
+/// Types d'accessoires (câble, caméra, manette…), paramétrables dans Plus → Accessoires.
+/// Référentiel commun, comme les plateformes.
+model AccessoryType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  position  Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  products Product[]
 }

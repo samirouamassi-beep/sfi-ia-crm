@@ -50,3 +50,10 @@ test("plus fortes variations", () => {
   assert.equal(movers[0].ratio, 2);
   assert.equal(computeMovers([{ ...item, manualValueCents: 1 }], index, new Date("2026-01-20"), new Date()).length, 0);
 });
+
+test("un exemplaire vendu sort de la courbe à sa date de vente", () => {
+  const sold = { ...item, soldAt: new Date("2026-02-20") };
+  const points = buildTimeline([sold], index, [new Date("2026-02-10"), new Date("2026-03-10")]);
+  assert.deepEqual(points.map((p) => [p.valueCents, p.investedCents]), [[2000, 1500], [0, 0]]);
+  assert.equal(computeMovers([sold], index, new Date("2026-01-20"), new Date("2026-03-20")).length, 0);
+});

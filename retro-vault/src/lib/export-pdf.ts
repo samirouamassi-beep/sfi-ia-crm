@@ -191,6 +191,9 @@ export async function buildPdf(report: Report): Promise<Buffer> {
         rows.push({ group: `${current} (${count})` });
       }
       const details = [
+        ...(r.status === "FOR_SALE" ? [`À VENDRE${r.askingPriceCents != null ? ` ${formatCents(r.askingPriceCents, { round: true })}` : ""}`] : []),
+        ...(r.status === "SOLD" ? [`VENDU${r.soldAt ? ` le ${r.soldAt.toLocaleDateString("fr-FR", { timeZone: "UTC" })}` : ""}`] : []),
+        ...(r.product.accessoryType ? [r.product.accessoryType.name] : []),
         REGION_LABELS[r.region],
         COMPLETENESS_LABELS[r.completeness].label,
         ...([
@@ -228,6 +231,39 @@ export async function buildPdf(report: Report): Promise<Buffer> {
         { label: "Plus-value", width: CONTENT_W - 440, align: "right" },
       ],
       rows
+    );
+  }
+
+  if (report.sales && report.sales.length > 0) {
+    const net = report.sales.reduce((s, r) => s + (r.valueCents ?? 0), 0);
+    const realized = report.sales.reduce((s, r) => s + (r.deltaCents ?? 0), 0);
+    sectionTitle(doc, "Ventes");
+    doc
+      .font("Helvetica")
+      .fontSize(8.5)
+      .fillColor(C.muted)
+      .text(pdfText(`${report.sales.length} vente(s) · ${formatCents(net)} encaissés · plus-value réalisée ${formatDelta(realized)}`));
+    doc.moveDown(0.4);
+    table(
+      doc,
+      [
+        { label: "Titre", width: 215 },
+        { label: "Vendu le", width: 60 },
+        { label: "Achat", width: 70, align: "right" },
+        { label: "Net encaissé", width: 80, align: "right" },
+        { label: "Plus-value", width: CONTENT_W - 425, align: "right" },
+      ],
+      report.sales.map((r) => [
+        {
+          text: r.product.title,
+          sub: [r.product.platform.shortName, r.product.accessoryType?.name, COMPLETENESS_LABELS[r.completeness].label, r.saleChannel].filter(Boolean).join(" · "),
+          bold: true,
+        },
+        { text: r.soldAt ? r.soldAt.toLocaleDateString("fr-FR", { timeZone: "UTC" }) : "-" },
+        { text: money(r.purchaseCents) },
+        { text: money(r.valueCents), sub: r.saleFeesCents ? pdfText(`frais ${formatCents(r.saleFeesCents)} déduits`) : undefined },
+        { text: r.deltaCents == null ? "-" : pdfText(formatDelta(r.deltaCents)), color: toneOf(r.deltaCents) },
+      ])
     );
   }
 

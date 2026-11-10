@@ -13,6 +13,8 @@ export type ValuedItem = ItemCondition & {
   acquiredAt: Date | null;
   createdAt: Date;
   purchaseCents: number | null;
+  /** Date de vente : l'exemplaire sort de la collection ce jour-là */
+  soldAt?: Date | null;
 };
 
 const seriesKey = (productId: string, region: Region) => `${productId}|${region}`;
@@ -68,6 +70,11 @@ export function ownedSince(item: ValuedItem): Date {
   return item.acquiredAt ?? item.createdAt;
 }
 
+/** Possédé à la date : acquis avant, et pas encore vendu. */
+export function ownedAt(item: ValuedItem, date: Date): boolean {
+  return ownedSince(item) <= date && (item.soldAt == null || item.soldAt > date);
+}
+
 export function itemValueAt(item: ValuedItem, index: PriceIndex, at: Date): number | null {
   return estimateValueCents(item, index.quoteAt(item.productId, item.region, at));
 }
@@ -102,7 +109,7 @@ export function buildTimeline(items: ValuedItem[], index: PriceIndex, dates: Dat
     let valueCents = 0;
     let investedCents = 0;
     for (const item of items) {
-      if (ownedSince(item) > date) continue;
+      if (!ownedAt(item, date)) continue;
       const purchase = item.purchaseCents ?? 0;
       investedCents += purchase;
       valueCents += itemValueAt(item, index, date) ?? purchase;
@@ -119,11 +126,11 @@ export type Mover = {
   ratio: number;
 };
 
-/** Variation de cote de chaque exemplaire entre `since` et `now` (valeurs manuelles exclues). */
+/** Variation de cote de chaque exemplaire possédé entre `since` et `now` (valeurs manuelles exclues). */
 export function computeMovers(items: ValuedItem[], index: PriceIndex, since: Date, now: Date): Mover[] {
   const movers: Mover[] = [];
   for (const item of items) {
-    if (item.manualValueCents != null) continue;
+    if (item.manualValueCents != null || !ownedAt(item, now)) continue;
     const before = itemValueAt(item, index, since);
     const current = itemValueAt(item, index, now);
     if (before == null || current == null || before === 0 || before === current) continue;

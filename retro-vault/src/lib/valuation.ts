@@ -90,6 +90,22 @@ export function estimateValueCents(c: ItemCondition, quote: PriceQuote | null): 
   return Math.round(base * conditionFactor(c));
 }
 
+export type SaleInfo = {
+  purchaseCents: number | null;
+  salePriceCents: number | null;
+  saleFeesCents?: number | null;
+};
+
+/** Montant net encaissé : prix de vente moins frais (commission, port…). */
+export function saleNetCents(s: SaleInfo): number | null {
+  return s.salePriceCents == null ? null : s.salePriceCents - (s.saleFeesCents ?? 0);
+}
+
+/** Plus-value réalisée d'un exemplaire vendu (net encaissé − prix d'achat). */
+export function realizedGain(s: SaleInfo) {
+  return gain(saleNetCents(s), s.purchaseCents);
+}
+
 export function gain(valueCents: number | null, purchaseCents: number | null) {
   if (valueCents == null || purchaseCents == null) return { deltaCents: null, ratio: null };
   const deltaCents = valueCents - purchaseCents;

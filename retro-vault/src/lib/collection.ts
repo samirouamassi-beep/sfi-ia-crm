@@ -13,7 +13,7 @@ import {
   type Region,
 } from "./catalog";
 import { PriceIndex, type Snapshot } from "./history";
-import { estimateValueCents, gain } from "./valuation";
+import { estimateValueCents, gain, realizedGain, saleNetCents } from "./valuation";
 
 export const SORTS = {
   title: "Titre (A → Z)",
@@ -34,7 +34,26 @@ export type CollectionFilters = {
   genre: string | null;
   /** Caractéristique oui/non cochée (id), ex. « Avec notice » */
   attr: string | null;
+  /** Type d'accessoire (id) */
+  accessory: string | null;
+  /** Statut : par défaut la collection actuelle (en collection + à vendre) */
+  status: StatusFilter;
   sort: SortKey;
+};
+
+export const STATUS_FILTERS = {
+  owned: "En collection",
+  for_sale: "À vendre",
+  sold: "Vendus",
+  all: "Tous (vendus inclus)",
+} as const;
+export type StatusFilter = keyof typeof STATUS_FILTERS;
+
+const STATUS_WHERE: Record<StatusFilter, Prisma.CollectionItemWhereInput> = {
+  owned: { status: { not: "SOLD" } },
+  for_sale: { status: "FOR_SALE" },
+  sold: { status: "SOLD" },
+  all: {},
 };
 
 type RawParams = Record<string, string | string[] | undefined>;
@@ -50,6 +69,8 @@ export function parseFilters(params: RawParams): CollectionFilters {
     kind: isEnumValue(KIND_VALUES, one(params.kind)) ? (one(params.kind) as ProductKind) : null,
     genre: one(params.genre) || null,
     attr: one(params.attr) || null,
+    accessory: one(params.accessory) || null,
+    status: one(params.status) in STATUS_FILTERS ? (one(params.status) as StatusFilter) : "owned",
     sort: sort in SORTS ? (sort as SortKey) : "added",
   };
 }
@@ -67,11 +88,15 @@ export async function loadPriceIndex(productIds: string[]): Promise<PriceIndex> 
 }
 
 const itemInclude = {
-  product: { include: { platform: true } },
+  product: { include: { platform: true, accessoryType: true } },
   photos: { orderBy: { position: "asc" }, take: 1 },
   attributeValues: true,
 } satisfies Prisma.CollectionItemInclude;
 
+/**
+ * valueCents : valeur estimée ; pour un exemplaire vendu, le net encaissé.
+ * deltaCents / ratio : plus-value latente, ou réalisée si vendu.
+ */
 export type CollectionRow = Prisma.CollectionItemGetPayload<{ include: typeof itemInclude }> & {
   valueCents: number | null;
   quoteDate: Date | null;
@@ -82,6 +107,7 @@ export type CollectionRow = Prisma.CollectionItemGetPayload<{ include: typeof it
 export async function loadCollection(userId: string, f: CollectionFilters): Promise<CollectionRow[]> {
   const where: Prisma.CollectionItemWhereInput = {
     userId,
+    ...STATUS_WHERE[f.status],
     ...(f.completeness && { completeness: f.completeness }),
     ...(f.region && { region: f.region }),
     ...(f.attr && { attributeValues: { some: { attributeId: f.attr, value: "true" } } }),
@@ -90,6 +116,7 @@ export async function loadCollection(userId: string, f: CollectionFilters): Prom
       ...(f.platform && { platform: { slug: f.platform } }),
       ...(f.kind && { kind: f.kind }),
       ...(f.genre && { genres: { has: f.genre } }),
+      ...(f.accessory && { accessoryTypeId: f.accessory }),
     },
   };
   const items = await prisma.collectionItem.findMany({ where, include: itemInclude });
@@ -97,6 +124,9 @@ export async function loadCollection(userId: string, f: CollectionFilters): Prom
   const now = new Date();
 
   const rows: CollectionRow[] = items.map((item) => {
+    if (item.status === "SOLD") {
+      return { ...item, valueCents: saleNetCents(item), quoteDate: null, ...realizedGain(item) };
+    }
     const quote = index.quoteAt(item.productId, item.region, now);
     const valueCents = estimateValueCents(item, quote);
     return { ...item, valueCents, quoteDate: quote?.capturedAt ?? null, ...gain(valueCents, item.purchaseCents) };
@@ -117,7 +147,7 @@ export async function loadCollection(userId: string, f: CollectionFilters): Prom
 
 /** Valeurs proposées dans les filtres (plateformes et genres présents dans la collection). */
 export async function loadFilterOptions(userId: string) {
-  const [products, flags] = await Promise.all([
+  const [products, flags, accessories] = await Promise.all([
     prisma.product.findMany({
       where: { items: { some: { userId } } },
       select: { genres: true, platform: { select: { slug: true, shortName: true, sortOrder: true } } },
@@ -126,6 +156,11 @@ export async function loadFilterOptions(userId: string) {
       where: { userId, type: "BOOLEAN" },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],
       select: { id: true, label: true },
+    }),
+    prisma.accessoryType.findMany({
+      where: { products: { some: { items: { some: { userId } } } } },
+      orderBy: [{ position: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
     }),
   ]);
   const platforms = new Map<string, { slug: string; shortName: string; sortOrder: number }>();
@@ -138,5 +173,6 @@ export async function loadFilterOptions(userId: string) {
     platforms: [...platforms.values()].sort((a, b) => a.sortOrder - b.sortOrder),
     genres: [...genres].sort((a, b) => a.localeCompare(b, "fr")),
     flags,
+    accessories,
   };
 }

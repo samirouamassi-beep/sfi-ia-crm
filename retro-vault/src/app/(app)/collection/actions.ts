@@ -3,7 +3,10 @@
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { ItemStatus } from "@/lib/catalog";
+import { parseEurosToCents } from "@/lib/money";
 import { requireUserId } from "@/lib/auth";
 import { parseItemForm, type FormState, type ItemFormValues } from "@/lib/item-form";
 import { findOrCreateProduct } from "@/lib/products";
@@ -37,6 +40,9 @@ async function parseForm(userId: string, formData: FormData) {
   const attributes = await listAttributes(userId, { activeOnly: true });
   const kind = parsed.data?.kind ?? "GAME";
   const attrs = parseAttributeFields(formData, attributes, kind);
+  if (parsed.data?.accessoryTypeId && !(await prisma.accessoryType.findUnique({ where: { id: parsed.data.accessoryTypeId } }))) {
+    attrs.errors.accessoryTypeId = "Type d'accessoire inconnu";
+  }
   const attrErrors = Object.keys(attrs.errors).length > 0;
   if (!parsed.data || attrErrors) {
     return {
@@ -61,6 +67,8 @@ async function productFor(v: ItemFormValues) {
     publisher: v.publisher,
     genres: v.genres,
     summary: v.summary,
+    // Accessoire : type choisi (ou retiré) dans le formulaire ; sinon type du produit inchangé.
+    accessoryTypeId: v.kind === "ACCESSORY" ? (v.accessoryTypeId ?? null) : undefined,
   });
 }
 
@@ -157,4 +165,60 @@ export async function refreshItemPrice(itemId: string) {
   if (!item) return;
   await refreshPrice(item.productId, item.region);
   revalidatePath(`/collection/${itemId}`);
+}
+
+const SaleSchema = z
+  .object({
+    status: z.enum(ItemStatus),
+    asking: z.string().optional(),
+    soldAt: z.string().optional(),
+    salePrice: z.string().optional(),
+    saleFees: z.string().optional(),
+    saleChannel: z.string().trim().max(60).optional(),
+  })
+  .transform((v, ctx) => {
+    const cents = (field: "asking" | "salePrice" | "saleFees", label: string) => {
+      if (!v[field]) return null;
+      const c = parseEurosToCents(v[field]);
+      if (c == null) ctx.addIssue({ code: "custom", path: [field], message: `${label} : montant invalide` });
+      return c;
+    };
+    if (v.status === "SOLD") {
+      const salePriceCents = cents("salePrice", "Prix de vente");
+      if (salePriceCents == null && !v.salePrice) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "Prix de vente obligatoire" });
+      if (!v.soldAt || !/^\d{4}-\d{2}-\d{2}$/.test(v.soldAt)) ctx.addIssue({ code: "custom", path: ["soldAt"], message: "Date de vente obligatoire" });
+      return {
+        status: v.status,
+        askingPriceCents: null,
+        soldAt: v.soldAt ? new Date(`${v.soldAt}T00:00:00Z`) : null,
+        salePriceCents,
+        saleFeesCents: cents("saleFees", "Frais"),
+        saleChannel: v.saleChannel || null,
+      };
+    }
+    // Retour « en collection » ou « à vendre » : les informations de vente sont effacées.
+    return {
+      status: v.status,
+      askingPriceCents: v.status === "FOR_SALE" ? cents("asking", "Prix demandé") : null,
+      soldAt: null,
+      salePriceCents: null,
+      saleFeesCents: null,
+      saleChannel: null,
+    };
+  });
+
+/** Carte « Vente » de la fiche : en collection / à vendre / vendu. */
+export async function updateSale(itemId: string, _state: FormState, formData: FormData): Promise<FormState> {
+  const userId = await requireUserId();
+  const item = await prisma.collectionItem.findFirst({ where: { id: itemId, userId } });
+  if (!item) return { error: "Exemplaire introuvable." };
+  const parsed = SaleSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) fieldErrors[String(issue.path[0])] ??= issue.message;
+    return { error: "Vérifiez les champs signalés.", fieldErrors };
+  }
+  await prisma.collectionItem.update({ where: { id: itemId }, data: parsed.data });
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

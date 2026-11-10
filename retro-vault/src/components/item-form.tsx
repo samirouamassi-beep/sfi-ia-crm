@@ -45,6 +45,7 @@ export type ItemFormInitial = {
   notes: string;
   /** Valeurs des caractéristiques personnalisées, par id de caractéristique */
   attributes: Record<string, string>;
+  accessoryTypeId: string;
 };
 
 export const EMPTY_ITEM: ItemFormInitial = {
@@ -65,18 +66,21 @@ export const EMPTY_ITEM: ItemFormInitial = {
   manualValue: "",
   notes: "",
   attributes: {},
+  accessoryTypeId: "",
 };
 
 type Props = {
   platforms: PlatformOption[];
   /** Caractéristiques actives (Plus → Caractéristiques) */
   attributes: AttributeDef[];
+  /** Types d'accessoires actifs (Plus → Accessoires) */
+  accessoryTypes: { id: string; name: string }[];
   initial?: ItemFormInitial;
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   submitLabel: string;
 };
 
-export function ItemForm({ platforms, attributes, initial = EMPTY_ITEM, action, submitLabel }: Props) {
+export function ItemForm({ platforms, attributes, accessoryTypes, initial = EMPTY_ITEM, action, submitLabel }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [kind, setKind] = useState(initial.kind);
   const [platformId, setPlatformId] = useState(initial.platformId);
@@ -135,6 +139,22 @@ export function ItemForm({ platforms, attributes, initial = EMPTY_ITEM, action, 
           searchEnabled={kind === "GAME"}
         />
         <FieldError message={errors.title} />
+        {kind === "ACCESSORY" && (
+          <Field label="Type d'accessoire" htmlFor="accessoryTypeId">
+            <Select id="accessoryTypeId" name="accessoryTypeId" defaultValue={initial.accessoryTypeId}>
+              <option value="">Non précisé</option>
+              {accessoryTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+            <FieldError message={errors.accessoryTypeId} />
+            <p className="text-xs text-ink-3">
+              Liste modifiable dans <Link href="/settings/accessories" className="text-accent">Plus → Accessoires</Link>.
+            </p>
+          </Field>
+        )}
         <GameHiddenFields game={game} />
       </fieldset>
 

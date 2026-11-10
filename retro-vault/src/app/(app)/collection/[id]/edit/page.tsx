@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { centsToEurosInput } from "@/lib/money";
 import { listAttributes } from "@/lib/attributes-store";
 import { listPlatforms } from "@/lib/platforms";
+import { listAccessoryTypes } from "@/lib/accessories";
 import { updateItem } from "../../actions";
 
 export const metadata = { title: "Modifier l'exemplaire" };
@@ -18,7 +19,10 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
     listAttributes(userId, { activeOnly: true }),
   ]);
   if (!item) notFound();
-  const platforms = await listPlatforms({ keepId: item.product.platformId });
+  const [platforms, accessoryTypes] = await Promise.all([
+    listPlatforms({ keepId: item.product.platformId }),
+    listAccessoryTypes({ keepId: item.product.accessoryTypeId }),
+  ]);
 
   const p = item.product;
   const initial: ItemFormInitial = {
@@ -47,13 +51,14 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
     purchase: centsToEurosInput(item.purchaseCents),
     manualValue: centsToEurosInput(item.manualValueCents),
     notes: item.notes ?? "",
+    accessoryTypeId: p.accessoryTypeId ?? "",
     attributes: Object.fromEntries(item.attributeValues.map((v) => [v.attributeId, v.value])),
   };
 
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title="Modifier" subtitle={p.title} />
-      <ItemForm platforms={platforms} attributes={attributes} initial={initial} action={updateItem.bind(null, id)} submitLabel="Enregistrer" />
+      <ItemForm platforms={platforms} attributes={attributes} accessoryTypes={accessoryTypes} initial={initial} action={updateItem.bind(null, id)} submitLabel="Enregistrer" />
     </div>
   );
 }
